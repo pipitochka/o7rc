@@ -6,13 +6,9 @@ brew install bison flex build-essential
 
 
 (Docker)
-```
-apt-get update && \
-   DEBIAN_FRONTEND=noninteractive apt-get install -y \
-        build-essential \
-        cmake \
-        flex \
-        bison \
-        git \
-        && rm -rf /var/lib/apt/lists/*
+```shell
+docker build -t o7rc .
+docker run -it --rm -v "$(pwd)":/work o7rc
+mkdir build && cd build
+cmake .. && make
 ```
