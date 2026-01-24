@@ -1,5 +1,5 @@
 #pragma once
-#include "../util/Token.h"
+#include <util/Token.h>
 
 class  ITokenizer {
 public:

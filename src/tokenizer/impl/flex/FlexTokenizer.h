@@ -1,5 +1,5 @@
 #pragma once
-#include "../../ITokenizer.h"
+#include <tokenizer/ITokenizer.h>
 #include <FlexLexer.h>
 
 class FlexTokenizer final: public ITokenizer {
