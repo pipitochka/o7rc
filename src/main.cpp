@@ -7,11 +7,15 @@
 #include <tokenizer/ITokenizer.h>
 
 #ifdef USE_FLEX
-#include "tokenizer/impl/flex/FlexTokenizer.h"
+#include <tokenizer/impl/flex/FlexTokenizer.h>
 #endif
 
 #ifdef USE_BISON
-#include "parser/impl/bison/BisonParser.h"
+#include <parser/impl/bison/BisonParser.h>
+#endif
+
+#ifdef USE_DEBUG
+#include <tokenizer/debug/BufferedTokenizer.h>
 #endif
 
 int main() {
@@ -34,6 +38,10 @@ int main() {
 
 #ifdef USE_FLEX
     tokenizer = std::make_unique<FlexTokenizer>(*file);
+#endif
+
+#ifdef USE_DEBUG
+    tokenizer = std::make_unique<BufferedTokenizer>(std::move(tokenizer));
 #endif
 
     std::unique_ptr<IParser> parser;

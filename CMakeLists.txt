@@ -8,6 +8,7 @@ set(SRC_DIR ${CMAKE_SOURCE_DIR}/src)
 
 option(USE_FLEX  "Build Flex tokenizer" ON)
 option(USE_BISON "Build Bison parser"   ON)
+option(USE_DEBUG "More info"   ON)
 
 add_executable(o7rc
         ${SRC_DIR}/main.cpp
@@ -24,8 +25,8 @@ if(USE_FLEX)
             ${CMAKE_SOURCE_DIR}/src/tokenizer/impl/flex/oberon.l 
             ${CMAKE_BINARY_DIR}/oberon_lex.cc
     )
-    target_sources(o7rc PRIVATE 
-            src/tokenizer/impl/flex/FlexTokenizer.cpp 
+    target_sources(o7rc PRIVATE
+            ${SRC_DIR}/tokenizer/impl/flex/FlexTokenizer.cpp 
             ${FLEX_O7Lexer_OUTPUTS}
     )
     target_compile_definitions(o7rc PRIVATE USE_FLEX=1)
@@ -38,13 +39,17 @@ if(USE_BISON)
             ${CMAKE_BINARY_DIR}/oberon.tab.cc
             DEFINES_FILE ${CMAKE_BINARY_DIR}/oberon.tab.h
     )
-    target_sources(o7rc PRIVATE 
-            src/parser/impl/bison/BisonParser.cpp 
-            src/parser/impl/bison/yylex_adapter.cpp 
+    target_sources(o7rc PRIVATE
+            ${SRC_DIR}/parser/impl/bison/BisonParser.cpp
+            ${SRC_DIR}/parser/impl/bison/yylex_adapter.cpp 
             ${BISON_O7Parser_OUTPUTS}
     )
     target_compile_definitions(o7rc PRIVATE USE_BISON=1)
 endif()
 
-
-
+if(USE_DEBUG)
+    target_sources(o7rc PRIVATE
+            ${SRC_DIR}/tokenizer/debug/BufferedTokenizer.cpp
+    )
+    target_compile_definitions(o7rc PRIVATE USE_DEBUG=1)
+endif()    

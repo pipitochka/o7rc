@@ -1,3 +1,23 @@
-MODULE M;
-BEGIN
-END M.
+PROCEDURE ReadInt(VAR x: INTEGER);
+    VAR i : INTEGER; ch: CHAR;
+BEGIN i := 0; Read(ch);
+    WHILE ("0" <= ch) & (ch <= "9") DO
+        i := 10*i + (ORD(ch)-ORD("0")); Read(ch)
+    END ;
+    x := i
+END ReadInt
+
+PROCEDURE WriteInt(x: INTEGER); (* 0 <= x < 10^5 *)
+    VAR i: INTEGER;
+        buf: ARRAY 5 OF INTEGER;
+BEGIN i := 0;
+    REPEAT buf[i] := x MOD 10; x := x DIV 10; INC(i) UNTIL x = 0;
+    REPEAT DEC(i); Write(CHR(buf[i] + ORD("0"))) UNTIL i = 0
+END WriteInt
+
+PROCEDURE log2(x: INTEGER): INTEGER;
+    VAR y: INTEGER; (*assume x>0*)
+BEGIN y := 0;
+    WHILE x > 1 DO x := x DIV 2; INC(y) END ;
+    RETURN y
+END log2
