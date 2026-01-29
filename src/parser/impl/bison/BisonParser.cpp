@@ -3,9 +3,9 @@
 
 #include "oberon.tab.h"
 
-int yyparse(ParserContext* ctx);
+int yyparse(ParserContext *ctx);
 
-bool BisonParser::parse(ITokenizer& tz) {
+bool BisonParser::parse(ITokenizer &tz) {
     ParserContext ctx;
     ctx.tz = &tz;
     return yyparse(&ctx) == 0;

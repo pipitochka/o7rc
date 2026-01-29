@@ -1,10 +1,10 @@
 #pragma once
-#include <tokenizer/ITokenizer.h>
 #include <FlexLexer.h>
+#include <tokenizer/ITokenizer.h>
 
-class FlexTokenizer final: public ITokenizer {
+class FlexTokenizer final : public ITokenizer {
 public:
-    explicit FlexTokenizer(std::istream& in);
+    explicit FlexTokenizer(std::istream &in);
 
     Token peek() override;
     Token next() override;
@@ -17,5 +17,4 @@ private:
     yyFlexLexer lexer;
     bool hasLA = false;
     Token la{};
-
 };

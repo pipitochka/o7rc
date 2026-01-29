@@ -1,10 +1,10 @@
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <string>
 
-#include <tokenizer/ITokenizer.h>
 #include <parser/IParser.h>
+#include <tokenizer/ITokenizer.h>
 
 #ifdef USE_FLEX
 #include "tokenizer/impl/flex/FlexTokenizer.h"
@@ -46,12 +46,13 @@ int main() {
         std::cerr << "No tokenizer built/selected\n";
         return 1;
     }
+
     if (!parser) {
         std::cerr << "No parser built/selected\n";
         return 1;
     }
 
-    bool ok = parser->parse(*tokenizer);
+    const bool ok = parser->parse(*tokenizer);
 
     std::cout << (ok ? "Parse OK\n" : "Parse FAILED\n");
     return ok ? 0 : 1;
