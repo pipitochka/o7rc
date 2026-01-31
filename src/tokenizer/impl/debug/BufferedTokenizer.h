@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-
+#include <memory>
 #include <tokenizer/ITokenizer.h>
 
 
