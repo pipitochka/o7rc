@@ -15,7 +15,7 @@
 #endif
 
 #ifdef USE_DEBUG
-#include <tokenizer/debug/BufferedTokenizer.h>
+#include <tokenizer/impl/debug/BufferedTokenizer.h>
 #endif
 
 int main() {

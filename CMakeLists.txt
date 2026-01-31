@@ -49,7 +49,7 @@ endif()
 
 if(USE_DEBUG)
     target_sources(o7rc PRIVATE
-            ${SRC_DIR}/tokenizer/debug/BufferedTokenizer.cpp
+            ${SRC_DIR}/tokenizer/impl/debug/BufferedTokenizer.cpp
     )
     target_compile_definitions(o7rc PRIVATE USE_DEBUG=1)
 endif()    
