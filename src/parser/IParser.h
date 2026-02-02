@@ -1,6 +1,6 @@
 #pragma once
 #include <tokenizer/ITokenizer.h>
-#include <util/Ast.h>
+#include <util/ast/Ast.h>
 
 class IParser {
 public:

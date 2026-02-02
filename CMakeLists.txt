@@ -10,8 +10,27 @@ option(USE_FLEX  "Build Flex tokenizer" ON)
 option(USE_BISON "Build Bison parser"   ON)
 option(USE_DEBUG "More info"   ON)
 
+add_library(ast STATIC
+        ${SRC_DIR}/util/ast/Expr.cpp
+)
+
+target_include_directories(ast PRIVATE
+        ${SRC_DIR}
+)
+
+#add_library(codegen STATIC
+#)
+#
+#target_include_directories(codegen PRIVATE
+#        ${SRC_DIR}
+#)
+
 add_executable(o7rc
         ${SRC_DIR}/main.cpp
+)
+
+target_link_libraries(o7rc
+        PUBLIC ast
 )
 
 target_include_directories(o7rc PRIVATE

@@ -60,8 +60,8 @@ int main() {
         return 1;
     }
 
-    const bool ok = parser->parse(*tokenizer);
+    //const bool ok = parser->parse(*tokenizer);
 
-    std::cout << (ok ? "Parse OK\n" : "Parse FAILED\n");
-    return ok ? 0 : 1;
+    //std::cout << (ok ? "Parse OK\n" : "Parse FAILED\n");
+    //return ok ? 0 : 1;
 }

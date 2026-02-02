@@ -1,14 +1,12 @@
 #pragma once
 
-#include <codegen/IVisitor.h>
-
-enum class NodeKind {
-
-};
+#include <memory>
+#include <util/IVisitor.h>
 
 class Node {
 public:
     virtual ~Node() = default;
-    explicit Node(NodeKind kind);
     virtual void accept(IVisitor &v) = 0;
 };
+
+using NodePtr = std::unique_ptr<Node>;
