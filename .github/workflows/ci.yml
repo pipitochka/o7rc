@@ -1,0 +1,35 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "develop", "main" ]
+  pull_request:
+    branches: [ "develop", "main" ]
+    
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Устанавливаем необходимые пакеты
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            cmake \
+            ninja-build \
+            flex \
+            bison \
+            git \
+            pkg-config \
+            gdb \
+            procps \
+            ca-certificates \
+            libfl-dev
+      
+      # Собираем проект
+      - name: make
+        run: mkdir build && cd build && cmake .. && make 
