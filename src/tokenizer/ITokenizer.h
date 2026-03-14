@@ -1,6 +1,8 @@
 #pragma once
 #include <util/Token.h>
 
+#include <memory>
+
 
 class ITokenizer {
 public:
