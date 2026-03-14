@@ -9,5 +9,6 @@ ModulePtr BisonParser::parse(ITokenizerPtr tz) {
     ParserContext ctx;
     ctx.tz = tz;
     yyparse(&ctx);
-    return std::move(ctx.module);;
+    return std::move(ctx.module);
+    ;
 }

@@ -6,7 +6,7 @@
 #include <string>
 #include <tokenizer/ITokenizer.h>
 
-struct Module; 
+struct Module;
 
 struct ParserContext {
     ITokenizerPtr tz = nullptr;

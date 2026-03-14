@@ -1,6 +1,6 @@
 #pragma once
-#include <util/ast/Node.h>
 #include <util/ast/IVisitor.h>
+#include <util/ast/Node.h>
 
 #include <optional>
 #include <string>
@@ -9,17 +9,17 @@
 struct Import final : Node {
     std::string name;
     std::optional<std::string> alias;
-    void accept(IVisitor& v) override { v.visit(*this); }
+    void accept(IVisitor &v) override { v.visit(*this); }
 };
 
 struct ProcDecl final : Decl {
     std::string name;
 
     std::vector<Ptr<ParamDecl>> params;
-    TypePtr returnType;   // nullptr => no result
+    TypePtr returnType; // nullptr => no result
     Ptr<Block> body;
 
-    void accept(IVisitor& v) override { v.visit(*this); }
+    void accept(IVisitor &v) override { v.visit(*this); }
 };
 
 struct Module final : Node {
@@ -29,5 +29,5 @@ struct Module final : Node {
     std::vector<Import> imports;
     Ptr<Block> block;
 
-    void accept(IVisitor& v) override { v.visit(*this); }
+    void accept(IVisitor &v) override { v.visit(*this); }
 };

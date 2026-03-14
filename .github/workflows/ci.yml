@@ -29,7 +29,19 @@ jobs:
             procps \
             ca-certificates \
             libfl-dev
-      
-      # Собираем проект
-      - name: make
-        run: mkdir build && cd build && cmake .. && make 
+
+      - name: Build
+        run: |
+          mkdir build
+          cd build
+          cmake --build . --parallel 
+
+      - name: Run Tests
+        run: |
+          cd build
+          ctest --output-on-failure
+
+      - name: Style
+        run: |
+          find src tests -type f \( -name "*.cpp" -o -name "*.h" \) \
+          -exec clang-format --style=file --dry-run --Werror {} +

@@ -5,7 +5,7 @@
 
 struct SourcePos {
     std::uint32_t line = 1;
-    std::uint32_t col  = 1;
+    std::uint32_t col = 1;
 };
 
 struct SourceRange {
@@ -16,7 +16,7 @@ struct SourceRange {
 struct Node {
     SourceRange range{};
     virtual ~Node() = default;
-    virtual void accept(IVisitor& v) = 0;
+    virtual void accept(IVisitor &v) = 0;
 };
 
 struct Expr : Node {};

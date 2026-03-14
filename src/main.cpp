@@ -43,10 +43,10 @@ int main() {
 
 #ifdef USE_DEBUG
     auto buffered = std::make_unique<BufferedTokenizer>(std::move(tokenizer));
-    
+
     try {
         buffered->check();
-    } catch (const std::exception& ex) {
+    } catch (const std::exception &ex) {
         std::cerr << ex.what() << "\n";
         return 1;
     }
