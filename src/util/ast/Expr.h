@@ -1,43 +1,71 @@
 #pragma once
+#include <util/ast/Node.h>
+#include <util/ast/IVisitor.h>
 
-#include <memory>
-#include "Ast.h"
+#include <cstdint>
+#include <string>
+#include <vector>
 
-class Expr : public Node {
-public:
-    virtual ~Expr() = default;
+struct LiteralExpr final : Expr {
+    enum class Kind { Int, Real, String, Bool, Nil } kind = Kind::Int;
+
+    std::int64_t intValue = 0;
+    double realValue = 0.0;
+    std::string strValue;
+    bool boolValue = false;
+
+    static Ptr<LiteralExpr> makeInt(std::int64_t v) {
+        auto p = std::make_unique<LiteralExpr>();
+        p->kind = Kind::Int; p->intValue = v;
+        return p;
+    }
+
+    void accept(IVisitor& v) override { v.visit(*this); }
 };
 
-using ExprPtr = std::unique_ptr<Expr>;
+struct DesignatorExpr final : Expr {
+    std::string baseName;
+    std::vector<SelectorPtr> selectors; 
 
-enum class UnOp { Neg, Not };
-
-class UnaryExpr final: public Expr {
-public:
-    UnOp op;
-    ExprPtr operand;
-
-    UnaryExpr(const UnOp op, ExprPtr operand) : op(op), operand(std::move(operand)) {}
-
-    void accept(IVisitor &v) override;
+    void accept(IVisitor& v) override { v.visit(*this); }
 };
 
-enum class BinOp {
-    Add, Sub, Mul,
-    RealDiv, IntDiv, Mod,
-    And, Or,
-    Eq, Neq, Lt, Le, Gt, Ge,
-    In,
-    Is
+struct CallExpr final : Expr {
+    ExprPtr callee;
+    std::vector<ExprPtr> args;
+
+    void accept(IVisitor& v) override { v.visit(*this); }
 };
 
-class BinaryExpr final: public Expr {
-public:
-    BinOp op;
+struct UnaryExpr final : Expr {
+    enum class Op { Neg, Not } op = Op::Neg;
+    ExprPtr rhs;
+
+    void accept(IVisitor& v) override { v.visit(*this); }
+};
+
+struct BinaryExpr final : Expr {
+    enum class Op {
+        Or, And,
+        Eq, Neq, Lt, Le, Gt, Ge,
+        Add, Sub,
+        Mul, RDiv, IDiv, Mod
+    } op = Op::Add;
+
     ExprPtr lhs;
     ExprPtr rhs;
 
-    BinaryExpr(const BinOp op, ExprPtr lhs, ExprPtr rhs) : op(op), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+    void accept(IVisitor& v) override { v.visit(*this); }
+};
 
-    void accept(IVisitor &v) override;
+struct IsExpr final : Expr {
+    ExprPtr expr;
+    TypePtr type;
+    void accept(IVisitor& v) override { v.visit(*this); }
+};
+
+struct InExpr final : Expr {
+    ExprPtr elem;
+    ExprPtr setExpr; 
+    void accept(IVisitor& v) override { v.visit(*this); }
 };

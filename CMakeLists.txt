@@ -10,20 +10,23 @@ option(USE_FLEX  "Build Flex tokenizer" ON)
 option(USE_BISON "Build Bison parser"   ON)
 option(USE_DEBUG "More info"   ON)
 
-add_library(ast STATIC
-        ${SRC_DIR}/util/ast/Expr.cpp
+add_library(ast INTERFACE
+        ${SRC_DIR}/util/ast/AstFwd.h
+        ${SRC_DIR}/util/ast/IVisitor.h
+        ${SRC_DIR}/util/ast/Node.h
+        ${SRC_DIR}/util/ast/Expr.h
+        ${SRC_DIR}/util/ast/Selector.h
+        ${SRC_DIR}/util/ast/Type.h
+        ${SRC_DIR}/util/ast/Decl.h
+        ${SRC_DIR}/util/ast/Block.h
+        ${SRC_DIR}/util/ast/Stmt.h
+        ${SRC_DIR}/util/ast/Module.h
+        ${SRC_DIR}/util/ast/Ast.h
 )
 
-target_include_directories(ast PRIVATE
-        ${SRC_DIR}
+target_include_directories(ast INTERFACE
+        ${SRC_DIR}/util/ast
 )
-
-#add_library(codegen STATIC
-#)
-#
-#target_include_directories(codegen PRIVATE
-#        ${SRC_DIR}
-#)
 
 add_executable(o7rc
         ${SRC_DIR}/main.cpp
