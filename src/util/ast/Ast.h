@@ -8,3 +8,4 @@
 #include <util/ast/Block.h>
 #include <util/ast/Stmt.h>
 #include <util/ast/Module.h>
+#include <util/ast/Selector.h>

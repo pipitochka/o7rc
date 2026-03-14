@@ -9,3 +9,5 @@ public:
     
     virtual ~ITokenizer() = default;
 };
+
+using ITokenizerPtr = std::shared_ptr<ITokenizer>;

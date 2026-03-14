@@ -4,6 +4,6 @@
 class BisonParser final : public IParser {
 public:
     BisonParser() = default;
-    bool parse(ITokenizer &tz) override;
+    ModulePtr parse(ITokenizerPtr tz) override;
     ~BisonParser() override = default;
 };

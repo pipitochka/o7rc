@@ -1,0 +1,153 @@
+MODULE AllFeatures;
+
+(* 1. ИМПОРТЫ *)
+IMPORT Out, Math, Custom := MyAlias; 
+
+(* 2. КОНСТАНТЫ *)
+CONST
+    MaxCount = 100;
+    Pi = 3.1415926;
+    Greeting = "Hello, RISC-V!"; (* Строки *)
+    LetterA = "A";             (* Символы *)
+    HexSymbol = 0X;            (* Символ в Hex *)
+    HexNumber = 0DEADBEEFH;    (* Число в Hex *)
+    BaseSet = {0, 2..5, 8};    (* Множества (Sets) и диапазоны *)
+    Negative = -10;            (* Унарный минус в константах *)
+
+(* 3. ТИПЫ ДАННЫХ *)
+TYPE
+    (* Базовые алиасы *)
+    Color* = INTEGER; (* Звездочка (*) означает экспорт (public) *)
+    
+    (* Указатели (Pointers) *)
+    NodePtr = POINTER TO NodeDesc;
+    
+    (* Процедурные типы (Функции как переменные) *)
+    Callback = PROCEDURE (x: INTEGER): BOOLEAN;
+
+    (* Записи (Records) *)
+    BaseRecord = RECORD
+        id: INTEGER;
+        name: ARRAY 32 OF CHAR
+    END;
+
+    (* Расширение типов (Type Extension / Наследование) *)
+    NodeDesc = RECORD (BaseRecord)
+        left, right: NodePtr;
+        value: REAL;
+        flags: SET;
+        isActive: BOOLEAN
+    END;
+
+    (* Многомерные массивы *)
+    Matrix = ARRAY 10, 10 OF REAL;
+    Vector = ARRAY 5 OF INTEGER;
+
+(* 4. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ *)
+VAR
+    i, j, k: INTEGER;
+    r1, r2: REAL;
+    b1, b2: BOOLEAN;
+    ch: CHAR;
+    s1, s2: SET;
+    root: NodePtr;
+    mat: Matrix;
+    vec: Vector;
+    obj: BaseRecord;
+    myCall: Callback;
+
+(* 5. ПРОЦЕДУРЫ И ФУНКЦИИ *)
+
+(* Процедура без возвращаемого значения, с параметрами-значениями и VAR-параметрами (по ссылке) *)
+PROCEDURE DoMath(x: INTEGER; VAR y: INTEGER);
+    VAR temp: INTEGER; (* Локальные переменные *)
+BEGIN
+    temp := x * x DIV 2;
+    y := temp MOD 10
+END DoMath;
+
+(* Функция (возвращает значение) *)
+PROCEDURE GetMax(a, b: INTEGER): INTEGER;
+BEGIN
+    IF a > b THEN
+        RETURN a
+    ELSE
+        RETURN b
+    END
+END GetMax;
+
+(* Работа с указателями, приведение типов (Type Guard) и проверка типов (Type Test) *)
+PROCEDURE ProcessRecord(p: POINTER TO BaseRecord);
+BEGIN
+    (* Type Test (оператор IS) *)
+    IF p IS NodePtr THEN
+        (* Type Guard: приведение p к NodePtr через p(NodePtr) *)
+        p(NodePtr).value := Pi;
+        p(NodePtr).isActive := TRUE
+    END
+END ProcessRecord;
+
+(* 6. ТЕЛО МОДУЛЯ (Главный блок) *)
+BEGIN
+    (* --- Присваивания и Селекторы --- *)
+    i := 10;
+    root^.id := 1;                 (* Разыменование указателя (^) и доступ к полю (.) *)
+    root^.left := NIL;             (* NIL *)
+    vec[0] := i + 5;               (* Индексация одномерного массива *)
+    mat[i, j] := 1.5;              (* Индексация многомерного массива *)
+    obj.name[2] := "X";            (* Цепочка селекторов *)
+
+    (* --- Арифметические выражения --- *)
+    k := (i + j) * MaxCount - (i DIV 2) MOD 3;
+    r1 := r2 / 2.0 + Pi;
+
+    (* --- Логические выражения --- *)
+    b1 := (i = j) & (k # 0) OR (i < 0) & ~b2; 
+    b2 := (i <= j) & (k >= i) & (i > 0);
+
+    (* --- Работа с множествами (Sets) --- *)
+    s1 := {0, 5};
+    s2 := s1 + {1..3};             (* Объединение *)
+    s1 := s2 - {2};                (* Разность *)
+    s2 := s1 * BaseSet;            (* Пересечение *)
+    s1 := s1 / {0};                (* Симметричная разность *)
+    b1 := 5 IN s1;                 (* Проверка вхождения (IN) *)
+
+    (* --- Управляющие конструкции (Statements) --- *)
+    
+    (* 1. IF-THEN-ELSIF-ELSE *)
+    IF i = 0 THEN
+        j := 1
+    ELSIF i = 1 THEN
+        j := 2
+    ELSE
+        j := 3
+    END;
+
+    (* 2. WHILE цикл *)
+    WHILE i < 100 DO
+        i := i * 2;
+        INC(j)                     (* Встроенные процедуры: INC, DEC *)
+    END;
+
+    (* 3. REPEAT-UNTIL цикл *)
+    REPEAT
+        DEC(i, 2);
+        DoMath(i, j)               (* Вызов пользовательской процедуры *)
+    UNTIL i <= 0;
+
+    (* 4. FOR цикл (Присутствует в Oberon-07) *)
+    FOR k := 0 TO 10 BY 2 DO
+        vec[k DIV 2] := k
+    END;
+
+    (* 5. CASE (Оператор выбора - может требовать отдельного парсинга!) *)
+    CASE i OF
+          0: j := 1
+        | 1, 2, 3: j := 2
+        | 4..10: j := 3
+    ELSE
+        j := 0
+    END
+
+END AllFeatures.

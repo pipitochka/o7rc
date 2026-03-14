@@ -1,6 +1,9 @@
 #pragma once
+#include <memory>
 
 struct IVisitor;
+
+struct Node;
 
 struct Module;
 struct Import;
@@ -47,3 +50,15 @@ struct DerefSelector;
 
 struct CaseAlternative;
 struct CaseLabel;
+
+template<class T>
+using Ptr = std::unique_ptr<T>;
+
+using NodePtr = Ptr<Node>;
+using ExprPtr = Ptr<Expr>;
+using StmtPtr = Ptr<Stmt>;
+using DeclPtr = Ptr<Decl>;
+using TypePtr = Ptr<TypeNode>;
+using SelectorPtr = Ptr<Selector>;
+
+using ModulePtr = Ptr<Module>;

@@ -5,8 +5,9 @@
 
 int yyparse(ParserContext *ctx);
 
-bool BisonParser::parse(ITokenizer &tz) {
+ModulePtr BisonParser::parse(ITokenizerPtr tz) {
     ParserContext ctx;
-    ctx.tz = &tz;
-    return yyparse(&ctx) == 0;
+    ctx.tz = tz;
+    yyparse(&ctx);
+    return std::move(ctx.module);;
 }
