@@ -30,16 +30,15 @@ jobs:
             ca-certificates \
             libfl-dev
 
-      - name: Build
-        run: |
-          mkdir build
-          cd build
-          cmake --build . --parallel 
+      - name: Configure CMake
+        run: cmake -B build -S .
 
+      - name: Build
+        run: cmake --build build --parallel
+      
       - name: Run Tests
-        run: |
-          cd build
-          ctest --output-on-failure
+        run: ctest --test-dir build --output-on-failure
+
 
       - name: Style
         run: |

@@ -33,8 +33,10 @@ cmake .. && make
 
 (macOS)
 ```bash
-brew install bison flex build-essential cmake
+xcode-select --install
+brew install bison flex cmake
 ```
+
 (Linux)
 ```shell
 apt-get update && apt-get install -y --no-install-recommends \
