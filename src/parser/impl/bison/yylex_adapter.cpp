@@ -1,4 +1,5 @@
 #include <util/Token.h>
+
 #include "ParserContext.h"
 #include "oberon.tab.h"
 

@@ -1,10 +1,9 @@
 #pragma once
-
-#include "AstFwd.h"
+#include <tokenizer/ITokenizer.h>
+#include <util/ast/AstFwd.h>
 
 #include <memory>
 #include <string>
-#include <tokenizer/ITokenizer.h>
 
 struct Module;
 
