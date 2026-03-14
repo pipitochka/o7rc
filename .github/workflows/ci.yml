@@ -32,4 +32,4 @@ jobs:
       
       # Собираем проект
       - name: make
-        run: cd src && mkdir build && cd build && cmake .. && make 
+        run: mkdir build && cd build && cmake .. && make 
