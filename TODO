@@ -1,2 +1,4 @@
+find src tests -type f \( -name "*.cpp" -o -name "*.h" \) -exec clang-format -i {} +
+
 1. инструкция по запуску программы
 2. каталог bin

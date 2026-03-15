@@ -78,7 +78,7 @@ if(USE_FLEX)
             ${TESTS_DIR}/tokenizer/flex/test_flex_tokenizer_grammar.cpp
             ${TESTS_DIR}/tokenizer/flex/test_flex_tokenizer_snippets.cpp
     )
-    target_compile_definitions(core PRIVATE USE_FLEX=1)
+    target_compile_definitions(core PUBLIC USE_FLEX=1)
 else()
     message(FATAL_ERROR "No tokenizer selected!")    
 endif()
@@ -96,7 +96,7 @@ if(USE_BISON)
             ${SRC_DIR}/parser/impl/bison/yylex_adapter.cpp 
             ${BISON_O7Parser_OUTPUTS}
     )
-    target_compile_definitions(core PRIVATE USE_BISON=1)
+    target_compile_definitions(core PUBLIC USE_BISON=1)
 else()
     message(FATAL_ERROR "No lexer selected!")
 endif()
@@ -104,7 +104,7 @@ if(USE_DEBUG)
     target_sources(core PRIVATE
             ${SRC_DIR}/tokenizer/impl/debug/BufferedTokenizer.cpp
     )
-    target_compile_definitions(core PRIVATE USE_DEBUG=1)
+    target_compile_definitions(core PUBLIC USE_DEBUG=1)
 endif()
 
 add_executable(o7rc
