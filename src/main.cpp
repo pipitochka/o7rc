@@ -50,6 +50,9 @@ int main() {
         std::cerr << ex.what() << "\n";
         return 1;
     }
+
+    buffered->print();
+    
     tokenizer = std::move(buffered);
 
 #endif

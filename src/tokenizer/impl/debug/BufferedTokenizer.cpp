@@ -38,8 +38,7 @@ void BufferedTokenizer::check() {
 }
 
 void BufferedTokenizer::print() {
-    int i = 0;
     for (auto &token: tokens) {
-        // std::cout << i++ << " :" << token.type << token.text << " ";
+        std::cout << token;
     }
 }

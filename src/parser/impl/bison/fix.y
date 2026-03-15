@@ -4,7 +4,6 @@
   #include <util/Token.h>
   #include <util/ast/Ast.h>
 
-  // Вспомогательные структуры для парсера (чтобы прокидывать списки)
   struct IdentDef {
       std::string name;
       bool exported = false;
@@ -29,7 +28,6 @@ static void yyerror(ParserContext* ctx, const char* msg) {
   std::fprintf(stderr, "parse error: %s\n", msg);
 }
 
-// Функции для очистки памяти при ошибках синтаксиса
 template<typename T>
 static void deleteVec(std::vector<T*>* v) {
   if (!v) return;
@@ -45,7 +43,6 @@ static void deleteVec(std::vector<T*>* v) {
 
 %code provides { int yylex(YYSTYPE* yylval, ParserContext* ctx); }
 
-/* ===== sem values ===== */
 %union {
   Token* tok;
 
@@ -72,8 +69,7 @@ static void deleteVec(std::vector<T*>* v) {
   std::vector<CaseLabel*>* labels;
 }
 
-/* ===== tokens ===== */
-%token <tok> TOK_IDENT TOK_INTEGER TOK_REAL TOK_STRING // TOK_CHAR если добавишь
+%token <tok> TOK_IDENT TOK_INTEGER TOK_REAL TOK_STRING 
 
 %token TOK_KW_MODULE TOK_KW_BEGIN TOK_KW_END TOK_KW_IMPORT
 %token TOK_KW_CONST TOK_KW_TYPE TOK_KW_VAR TOK_KW_PROCEDURE
@@ -92,7 +88,6 @@ static void deleteVec(std::vector<T*>* v) {
 %token TOK_COMMA TOK_SEMICOLON TOK_COLON TOK_DOT
 %token TOK_UNKNOWN
 
-/* ===== types ===== */
 %type <module>     module
 %type <block>      block
 %type <identdef>   identdef
@@ -111,8 +106,7 @@ static void deleteVec(std::vector<T*>* v) {
 %type <exprs>      opt_args arg_list expr_list set_elements
 %type <des>        designator
 
-/* ===== precedence ===== */
-/* Приоритеты строго по стандарту Oberon-07 */
+
 %nonassoc TOK_EQ TOK_NEQ TOK_LT TOK_LE TOK_GT TOK_GE TOK_KW_IN TOK_KW_IS
 %left TOK_PLUS TOK_MINUS TOK_KW_OR
 %left TOK_STAR TOK_SLASH TOK_KW_DIV TOK_KW_MOD TOK_AMP
@@ -120,10 +114,8 @@ static void deleteVec(std::vector<T*>* v) {
 
 %%
 
-/* ================== ROOT ================== */
 input : module { ctx->module.reset($1); } ;
 
-/* ================== MODULE ================== */
 module
   : TOK_KW_MODULE TOK_IDENT TOK_SEMICOLON
     import_list
@@ -141,7 +133,6 @@ module
         YYERROR;
       }
 
-      // Добавляем импорты и декларации (const/type/var/proc)
       // m->imports = ... (реализуй наполнение)
       // m->decls = ... 
       m->block.reset($6);
