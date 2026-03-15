@@ -15,6 +15,35 @@ option(USE_FLEX  "Build Flex tokenizer" ON)
 option(USE_BISON "Build Bison parser"   ON)
 option(USE_DEBUG "More info"   ON)
 
+include(FetchContent)
+
+FetchContent_Declare(
+        googletest
+        URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+)
+
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(googletest)
+
+enable_testing()
+
+add_library(core "")
+
+add_executable(o7rc_tests
+        ${TESTS_DIR}/basic.cpp
+)
+
+target_include_directories(core PRIVATE
+        ${SRC_DIR}
+        ${CMAKE_BINARY_DIR}
+)
+
+target_include_directories(o7rc_tests PRIVATE
+        ${SRC_DIR}
+        ${CMAKE_BINARY_DIR}
+)
+
 add_library(ast INTERFACE
         ${SRC_DIR}/util/ast/AstFwd.h
         ${SRC_DIR}/util/ast/IVisitor.h
@@ -31,16 +60,10 @@ add_library(ast INTERFACE
 
 target_include_directories(ast INTERFACE ${SRC_DIR}/util/ast)
 
-add_library(core "")
-
 target_link_libraries(core PUBLIC ast)
 
-target_include_directories(core PRIVATE
-        ${SRC_DIR}
-        ${CMAKE_BINARY_DIR}
-)
-
 if(USE_FLEX)
+    message("Use FLEX tokenizer")
     find_package(FLEX REQUIRED)
     FLEX_TARGET(O7Lexer 
             ${CMAKE_SOURCE_DIR}/src/tokenizer/impl/flex/oberon.l 
@@ -50,10 +73,18 @@ if(USE_FLEX)
             ${SRC_DIR}/tokenizer/impl/flex/FlexTokenizer.cpp 
             ${FLEX_O7Lexer_OUTPUTS}
     )
+    target_sources(o7rc_tests PRIVATE
+            ${TESTS_DIR}/tokenizer/flex/test_flex_tokenizer_logic.cpp
+            ${TESTS_DIR}/tokenizer/flex/test_flex_tokenizer_grammar.cpp
+            ${TESTS_DIR}/tokenizer/flex/test_flex_tokenizer_snippets.cpp
+    )
     target_compile_definitions(core PRIVATE USE_FLEX=1)
+else()
+    message(FATAL_ERROR "No tokenizer selected!")    
 endif()
 
 if(USE_BISON)
+    message("Use bison lexer")
     find_package(BISON REQUIRED)
     BISON_TARGET(O7Parser 
             ${CMAKE_SOURCE_DIR}/src/parser/impl/bison/oberon.y 
@@ -66,14 +97,15 @@ if(USE_BISON)
             ${BISON_O7Parser_OUTPUTS}
     )
     target_compile_definitions(core PRIVATE USE_BISON=1)
+else()
+    message(FATAL_ERROR "No lexer selected!")
 endif()
-
 if(USE_DEBUG)
     target_sources(core PRIVATE
             ${SRC_DIR}/tokenizer/impl/debug/BufferedTokenizer.cpp
     )
     target_compile_definitions(core PRIVATE USE_DEBUG=1)
-endif()    
+endif()
 
 add_executable(o7rc
         ${SRC_DIR}/main.cpp
@@ -86,29 +118,10 @@ target_include_directories(o7rc PRIVATE
 
 target_link_libraries(o7rc PRIVATE core)
 
-include(FetchContent)
-FetchContent_Declare(
-        googletest
-        URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
-)
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
-
-enable_testing()
-
-add_executable(o7rc_tests
-        ${TESTS_DIR}/basic.cpp
-)
-
 target_link_libraries(o7rc_tests
         PRIVATE
         core
         GTest::gtest_main
-)
-
-target_include_directories(o7rc_tests PRIVATE
-        ${SRC_DIR}
-        ${CMAKE_BINARY_DIR}
 )
 
 include(GoogleTest)
