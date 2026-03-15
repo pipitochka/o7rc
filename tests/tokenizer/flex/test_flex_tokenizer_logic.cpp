@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include <sstream>
 #include <memory>
+#include <sstream>
 
 #include <tokenizer/impl/flex/FlexTokenizer.h>
 
@@ -30,9 +30,9 @@ TEST(FlexTokenizerTest, AlternatingPeekAndNext) {
 
     EXPECT_EQ(tz.peek().type, TokenType::KW_VAR);
     EXPECT_EQ(tz.next().type, TokenType::KW_VAR);
-    
+
     EXPECT_EQ(tz.next().type, TokenType::Ident);
-    
+
     EXPECT_EQ(tz.peek().type, TokenType::Colon);
     EXPECT_EQ(tz.peek().type, TokenType::Colon);
     EXPECT_EQ(tz.next().type, TokenType::Colon);
@@ -44,7 +44,7 @@ TEST(FlexTokenizerTest, EofIsHandledCorrectly) {
 
     EXPECT_EQ(tz.peek().type, TokenType::Eof);
     EXPECT_EQ(tz.next().type, TokenType::Eof);
-    
+
     EXPECT_EQ(tz.next().type, TokenType::Eof);
 }
 
@@ -62,7 +62,7 @@ TEST(FlexTokenizerTest, LiteralValuesParsing) {
 
     Token tStr = tz.next();
     EXPECT_EQ(tStr.type, TokenType::String);
-    EXPECT_EQ(tStr.text, "hello world"); 
+    EXPECT_EQ(tStr.text, "hello world");
 }
 
 TEST(FlexTokenizerTest, OperatorsAndMaximumMunch) {
@@ -103,7 +103,7 @@ TEST(FlexTokenizerTest, CapturesUnknownCharacters) {
     FlexTokenizer tz(input);
 
     EXPECT_EQ(tz.next().type, TokenType::KW_VAR);
-    
+
     Token err1 = tz.next();
     EXPECT_EQ(err1.type, TokenType::Unknown);
     EXPECT_EQ(err1.text, "$");

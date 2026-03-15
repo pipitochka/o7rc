@@ -30,27 +30,25 @@ Token FlexTokenizer::readOne() {
 
     if (t.type == TokenType::Real) {
         t.realValue = std::stod(t.text);
-    } 
-    else if (t.type == TokenType::Integer) {
+    } else if (t.type == TokenType::Integer) {
         if (t.text.back() == 'H') {
-            std::string hexStr = t.text.substr(0, t.text.size() - 1); 
+            std::string hexStr = t.text.substr(0, t.text.size() - 1);
             t.intValue = std::stoll(hexStr, nullptr, 16);
         } else {
             t.intValue = std::stoll(t.text);
         }
-    }
-    else if (t.type == TokenType::String) {
+    } else if (t.type == TokenType::String) {
         if (t.text.back() == 'X') {
             std::string hexStr = t.text.substr(0, t.text.size() - 1); // Отрезаем 'X'
             char ch = static_cast<char>(std::stoi(hexStr, nullptr, 16));
-            t.text = std::string(1, ch); 
+            t.text = std::string(1, ch);
         } else {
             if (t.text.size() >= 2) {
-                t.text = t.text.substr(1, t.text.size() - 2); 
+                t.text = t.text.substr(1, t.text.size() - 2);
             }
         }
     }
-    
+
     return t;
 }
 
