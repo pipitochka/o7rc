@@ -21,6 +21,7 @@ struct NamedType;
 struct ArrayType;
 struct RecordType;
 struct PointerType;
+struct ProcParams;
 struct ProcType;
 struct FieldDecl;
 
@@ -40,6 +41,7 @@ struct UnaryExpr;
 struct BinaryExpr;
 struct CallExpr;
 struct DesignatorExpr;
+struct SetExpr;
 struct IsExpr;
 struct InExpr;
 
@@ -47,6 +49,7 @@ struct Selector;
 struct FieldSelector;
 struct IndexSelector;
 struct DerefSelector;
+struct TypeGuardSelector;
 
 struct CaseAlternative;
 struct CaseLabel;

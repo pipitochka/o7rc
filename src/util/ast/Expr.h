@@ -38,30 +38,32 @@ struct CallExpr final : Expr {
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
+//used
 struct UnaryExpr final : Expr {
-    enum class Op { Neg, Not } op = Op::Neg;
+    enum class Op { Neg, Not} op = Op::Neg;
     ExprPtr rhs;
 
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
+struct SetElement {
+    ExprPtr low = nullptr;
+    ExprPtr high = nullptr;
+};
+
+struct SetExpr final : Expr {
+    std::vector<SetElement> elements;
+
+    void accept(IVisitor &v) override { v.visit(*this); }
+};
+
+
+//used
 struct BinaryExpr final : Expr {
-    enum class Op { Or, And, Eq, Neq, Lt, Le, Gt, Ge, Add, Sub, Mul, RDiv, IDiv, Mod } op = Op::Add;
+    enum class Op { Or, And, Eq, Neq, Lt, Le, Gt, Ge, Add, Sub, Mul, RDiv, IDiv, Mod, In, Is, None } op = Op::None;
 
     ExprPtr lhs;
     ExprPtr rhs;
 
-    void accept(IVisitor &v) override { v.visit(*this); }
-};
-
-struct IsExpr final : Expr {
-    ExprPtr expr;
-    TypePtr type;
-    void accept(IVisitor &v) override { v.visit(*this); }
-};
-
-struct InExpr final : Expr {
-    ExprPtr elem;
-    ExprPtr setExpr;
     void accept(IVisitor &v) override { v.visit(*this); }
 };

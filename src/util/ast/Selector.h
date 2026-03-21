@@ -12,10 +12,15 @@ struct FieldSelector final : Selector {
 };
 
 struct IndexSelector final : Selector {
-    ExprPtr index;
+    std::vector<ExprPtr> index;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
 struct DerefSelector final : Selector {
+    void accept(IVisitor &v) override { v.visit(*this); }
+};
+
+struct TypeGuardSelector final : Selector {
+    std::string typeName;  
     void accept(IVisitor &v) override { v.visit(*this); }
 };

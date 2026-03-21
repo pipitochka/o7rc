@@ -22,5 +22,6 @@ struct Node {
 struct Expr : Node {};
 struct Stmt : Node {};
 struct Decl : Node {};
+//used
 struct TypeNode : Node {};
 struct Selector : Node {};

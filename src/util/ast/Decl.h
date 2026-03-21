@@ -5,18 +5,21 @@
 #include <string>
 #include <vector>
 
+//used
 struct ConstDecl final : Decl {
     std::string name;
-    ExprPtr value;
+    Ptr<Expr> value;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
+//used
 struct TypeDecl final : Decl {
     std::string name;
     TypePtr type;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
+//used
 struct VarDecl final : Decl {
     std::vector<std::string> names;
     TypePtr type;
@@ -30,4 +33,12 @@ struct ParamDecl final : Decl {
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
-// ProcDecl зависит от Block => подключим Block.h в ProcDecl.h или ниже после Block.h
+struct ProcDecl final : Decl {
+    std::string name;
+    TypePtr type;
+    std::vector<DeclPtr> params;
+    ExprPtr returnValue; 
+    std::vector<StmtPtr> body;
+
+    void accept(IVisitor &v) override { v.visit(*this); }
+};

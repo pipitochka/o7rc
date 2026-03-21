@@ -5,6 +5,11 @@
 #include <string>
 #include <vector>
 
+struct Branch {
+    ExprPtr cond;
+    std::vector<StmtPtr> body;
+};
+
 struct AssignStmt final : Stmt {
     Ptr<DesignatorExpr> lhs;
     ExprPtr rhs;
@@ -22,24 +27,21 @@ struct ReturnStmt final : Stmt {
 };
 
 struct IfStmt final : Stmt {
-    struct Branch {
-        ExprPtr cond;
-        Ptr<Block> body;
-    };
     std::vector<Branch> branches;
-    Ptr<Block> elseBody; // nullptr if absent
+    std::vector<StmtPtr> elseBody; 
 
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
 struct WhileStmt final : Stmt {
+    std::vector<Branch> branches;
     ExprPtr cond;
-    Ptr<Block> body;
+    std::vector<StmtPtr> body;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
 struct RepeatStmt final : Stmt {
-    Ptr<Block> body;
+    std::vector<StmtPtr> body;
     ExprPtr untilCond;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
@@ -49,27 +51,26 @@ struct ForStmt final : Stmt {
     ExprPtr from;
     ExprPtr to;
     ExprPtr by; // nullptr => default 1
-    Ptr<Block> body;
+    std::vector<StmtPtr> body;
 
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
 // CASE helpers
 struct CaseLabel final : Node {
-    ExprPtr from;
-    ExprPtr to; // nullptr => single label
+    ExprPtr from = nullptr;
+    ExprPtr to = nullptr; // nullptr => single label
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
 struct CaseAlternative final : Node {
     std::vector<Ptr<CaseLabel>> labels;
-    Ptr<Block> body;
+    std::vector<Ptr<Stmt>> body;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
 struct CaseStmt final : Stmt {
     ExprPtr expr;
     std::vector<Ptr<CaseAlternative>> alts;
-    Ptr<Block> elseBody;
     void accept(IVisitor &v) override { v.visit(*this); }
 };

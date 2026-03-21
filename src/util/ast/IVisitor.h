@@ -18,6 +18,7 @@ struct IVisitor {
     virtual void visit(ArrayType &) = 0;
     virtual void visit(RecordType &) = 0;
     virtual void visit(PointerType &) = 0;
+    virtual void visit(ProcParams &) = 0;
     virtual void visit(ProcType &) = 0;
     virtual void visit(FieldDecl &) = 0;
 
@@ -37,10 +38,13 @@ struct IVisitor {
     virtual void visit(DesignatorExpr &) = 0;
     virtual void visit(IsExpr &) = 0;
     virtual void visit(InExpr &) = 0;
+    virtual void visit(SetExpr &) = 0;
 
     virtual void visit(FieldSelector &) = 0;
     virtual void visit(IndexSelector &) = 0;
     virtual void visit(DerefSelector &) = 0;
+    virtual void visit(TypeGuardSelector &) = 0;
+
 
     virtual void visit(CaseAlternative &) = 0;
     virtual void visit(CaseLabel &) = 0;

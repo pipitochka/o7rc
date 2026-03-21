@@ -9,3 +9,4 @@
 #include <util/ast/Selector.h>
 #include <util/ast/Stmt.h>
 #include <util/ast/Type.h>
+#include <util/ast/Decl.h>

@@ -6,35 +6,49 @@
 #include <string>
 #include <vector>
 
+//used
 struct NamedType final : TypeNode {
     std::string name;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
+//used
 struct PointerType final : TypeNode {
     TypePtr baseType;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
+//used
 struct ArrayType final : TypeNode {
-    ExprPtr length; // nullptr => open array (если решишь)
+    std::vector<ExprPtr> length; 
     TypePtr elemType;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
+//used
 struct FieldDecl final : Node {
     std::vector<std::string> names;
     TypePtr type;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
+//used
 struct RecordType final : TypeNode {
+    TypePtr baseType;
     std::vector<Ptr<FieldDecl>> fields;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
+//used
+struct ProcParams final : Node {
+    std::vector<std::string> names;
+    TypePtr type;
+    void accept(IVisitor &v) override { v.visit(*this); }
+};
+
+//used
 struct ProcType final : TypeNode {
-    std::vector<Ptr<ParamDecl>> params; // ParamDecl объявлен в AstFwd
-    TypePtr returnType; // nullptr => no result
+    Ptr<NamedType> type;
+    std::vector<Ptr<ProcParams>> params;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
