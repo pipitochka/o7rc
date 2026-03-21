@@ -1,6 +1,9 @@
 #pragma once
+#include <memory>
 
 struct IVisitor;
+
+struct Node;
 
 struct Module;
 struct Import;
@@ -18,6 +21,7 @@ struct NamedType;
 struct ArrayType;
 struct RecordType;
 struct PointerType;
+struct ProcParams;
 struct ProcType;
 struct FieldDecl;
 
@@ -37,6 +41,7 @@ struct UnaryExpr;
 struct BinaryExpr;
 struct CallExpr;
 struct DesignatorExpr;
+struct SetExpr;
 struct IsExpr;
 struct InExpr;
 
@@ -44,6 +49,19 @@ struct Selector;
 struct FieldSelector;
 struct IndexSelector;
 struct DerefSelector;
+struct TypeGuardSelector;
 
 struct CaseAlternative;
 struct CaseLabel;
+
+template<class T>
+using Ptr = std::unique_ptr<T>;
+
+using NodePtr = Ptr<Node>;
+using ExprPtr = Ptr<Expr>;
+using StmtPtr = Ptr<Stmt>;
+using DeclPtr = Ptr<Decl>;
+using TypePtr = Ptr<TypeNode>;
+using SelectorPtr = Ptr<Selector>;
+
+using ModulePtr = Ptr<Module>;

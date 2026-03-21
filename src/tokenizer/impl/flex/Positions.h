@@ -5,3 +5,5 @@ std::uint32_t oberon_tok_line();
 std::uint32_t oberon_tok_col();
 std::uint32_t oberon_cur_line();
 std::uint32_t oberon_cur_col();
+
+void oberon_reset_positions();

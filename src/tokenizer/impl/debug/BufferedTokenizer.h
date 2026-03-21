@@ -1,15 +1,18 @@
 #pragma once
-
-#include <vector>
-#include <memory>
 #include <tokenizer/ITokenizer.h>
+
+#include <memory>
+#include <vector>
 
 
 class BufferedTokenizer : public ITokenizer {
 public:
-    explicit BufferedTokenizer(std::unique_ptr<ITokenizer> tokenizer);
+    explicit BufferedTokenizer(ITokenizerPtr tokenizer);
     Token next() override;
     Token peek() override;
+    void check();
+
+    void print();
 
 private:
     std::vector<Token> tokens;

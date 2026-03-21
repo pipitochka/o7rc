@@ -1,6 +1,6 @@
 #pragma once
-#include <util/ast/Node.h>
 #include <util/ast/IVisitor.h>
+#include <util/ast/Node.h>
 
 #include <cstdint>
 #include <string>
@@ -8,14 +8,19 @@
 
 struct FieldSelector final : Selector {
     std::string name;
-    void accept(IVisitor& v) override { v.visit(*this); }
+    void accept(IVisitor &v) override { v.visit(*this); }
 };
 
 struct IndexSelector final : Selector {
-    ExprPtr index; 
-    void accept(IVisitor& v) override { v.visit(*this); }
+    std::vector<ExprPtr> index;
+    void accept(IVisitor &v) override { v.visit(*this); }
 };
 
 struct DerefSelector final : Selector {
-    void accept(IVisitor& v) override { v.visit(*this); }
+    void accept(IVisitor &v) override { v.visit(*this); }
+};
+
+struct TypeGuardSelector final : Selector {
+    std::string typeName;  
+    void accept(IVisitor &v) override { v.visit(*this); }
 };

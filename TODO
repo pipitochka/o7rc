@@ -1,2 +1,7 @@
+find src tests -type f \( -name "*.cpp" -o -name "*.h" \) -exec clang-format -i {} +
+
+find src tests -type f \( -name "*.y" -o -name "*.l" -o -name "*.cpp" -o -name "*.hpp" -o -name "*.c" -o -name "*.h" \) -print0 \
+| xargs -0 wc -l
+
 1. инструкция по запуску программы
 2. каталог bin

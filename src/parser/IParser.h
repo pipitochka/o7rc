@@ -1,9 +1,9 @@
 #pragma once
 #include <tokenizer/ITokenizer.h>
-#include <util/ast/Ast.h>
+#include <util/ast/AstFwd.h>
 
 class IParser {
 public:
-    virtual bool parse(ITokenizer &tz) = 0;
+    virtual ModulePtr parse(ITokenizerPtr tz) = 0;
     virtual ~IParser() = default;
 };

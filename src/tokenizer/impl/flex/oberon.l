@@ -20,6 +20,14 @@ std::uint32_t oberon_tok_col()  { return g_tokCol;  }
 std::uint32_t oberon_cur_line() { return g_line;    }
 std::uint32_t oberon_cur_col()  { return g_col;     }
 
+void oberon_reset_positions() {
+    g_line = 1;
+    g_col = 1;
+    g_tokLine = 1;
+    g_tokCol = 1;
+    commentDepth = 0;
+}
+
 #define YY_USER_ACTION                                            \
     {                                                             \
         g_tokLine = g_line;                                       \
@@ -115,6 +123,7 @@ IDREST    [A-Za-z0-9_]
 ":"                         { return (int)TokenType::Colon; }
 "."                         { return (int)TokenType::Dot; }
 
+{DIGIT}+/".."                           { return (int)TokenType::Integer; }
 
 {DIGIT}+\.{DIGIT}*([Ee][+-]?{DIGIT}+)?  { return (int)TokenType::Real; }
 

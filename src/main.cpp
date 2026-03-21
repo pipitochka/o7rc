@@ -5,6 +5,7 @@
 
 #include <parser/IParser.h>
 #include <tokenizer/ITokenizer.h>
+#include <util/ast/Ast.h>
 
 #ifdef USE_FLEX
 #include <tokenizer/impl/flex/FlexTokenizer.h>
@@ -34,14 +35,26 @@ int main() {
         return 1;
     }
 
-    std::unique_ptr<ITokenizer> tokenizer;
+    ITokenizerPtr tokenizer;
 
 #ifdef USE_FLEX
     tokenizer = std::make_unique<FlexTokenizer>(*file);
 #endif
 
 #ifdef USE_DEBUG
-    tokenizer = std::make_unique<BufferedTokenizer>(std::move(tokenizer));
+    auto buffered = std::make_unique<BufferedTokenizer>(std::move(tokenizer));
+
+    try {
+        buffered->check();
+    } catch (const std::exception &ex) {
+        std::cerr << ex.what() << "\n";
+        return 1;
+    }
+
+    buffered->print();
+    
+    tokenizer = std::move(buffered);
+
 #endif
 
     std::unique_ptr<IParser> parser;
@@ -60,8 +73,5 @@ int main() {
         return 1;
     }
 
-    //const bool ok = parser->parse(*tokenizer);
-
-    //std::cout << (ok ? "Parse OK\n" : "Parse FAILED\n");
-    //return ok ? 0 : 1;
+    auto result = parser->parse(tokenizer);
 }

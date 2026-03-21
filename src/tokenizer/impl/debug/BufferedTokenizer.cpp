@@ -1,6 +1,9 @@
 #include "BufferedTokenizer.h"
 
-BufferedTokenizer::BufferedTokenizer(std::unique_ptr<ITokenizer> tokenizer) {
+#include <iostream>
+#include <stdio.h>
+
+BufferedTokenizer::BufferedTokenizer(ITokenizerPtr tokenizer) {
     while (true) {
         Token t = tokenizer->next();
         tokens.push_back(t);
@@ -22,4 +25,20 @@ Token BufferedTokenizer::next() {
         ++pos;
     }
     return t;
+}
+
+void BufferedTokenizer::check() {
+    for (auto &token: tokens) {
+        if (token.type == TokenType::Unknown) {
+            std::string msg = "Lexical error at line " + std::to_string(token.line) + ", col " +
+                              std::to_string(token.col) + ": Unknown token '" + token.text + "'";
+            throw std::runtime_error(msg);
+        }
+    }
+}
+
+void BufferedTokenizer::print() {
+    for (auto &token: tokens) {
+        std::cout << token;
+    }
 }
