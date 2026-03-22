@@ -97,9 +97,17 @@ if(USE_BISON)
             ${BISON_O7Parser_OUTPUTS}
     )
     target_compile_definitions(core PUBLIC USE_BISON=1)
+    target_sources(o7rc_tests PRIVATE
+            ${TESTS_DIR}/parser/bison/test_bison_parser_structure.cpp
+            ${TESTS_DIR}/parser/bison/test_bison_parser_snippets.cpp
+            ${TESTS_DIR}/parser/bison/test_bison_parser_ast_expr.cpp
+            ${TESTS_DIR}/parser/bison/test_bison_parser_ast_stmt.cpp
+            ${TESTS_DIR}/parser/bison/test_bison_parser_ast_types.cpp
+    )
 else()
     message(FATAL_ERROR "No lexer selected!")
 endif()
+
 if(USE_DEBUG)
     message("Use debug")
     target_sources(core PRIVATE
