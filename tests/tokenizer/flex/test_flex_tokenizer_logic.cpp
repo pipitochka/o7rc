@@ -4,6 +4,11 @@
 
 #include <tokenizer/impl/flex/FlexTokenizer.h>
 
+/**
+ * Проверяет, что peek() не потребляет токен — три последовательных
+ * вызова peek() возвращают один и тот же токен KW_MODULE.
+ * После этого next() также возвращает KW_MODULE, а следующий next() — Ident("Test").
+ */
 TEST(FlexTokenizerTest, PeekDoesNotConsumeToken) {
     std::istringstream input("MODULE Test;");
     FlexTokenizer tz(input);
@@ -24,6 +29,11 @@ TEST(FlexTokenizerTest, PeekDoesNotConsumeToken) {
     EXPECT_EQ(t5.text, "Test");
 }
 
+/**
+ * Проверяет корректность чередования peek() и next().
+ * Вход: VAR x: INTEGER;
+ * peek() должен показывать текущий токен, а next() — продвигать позицию.
+ */
 TEST(FlexTokenizerTest, AlternatingPeekAndNext) {
     std::istringstream input("VAR x: INTEGER;");
     FlexTokenizer tz(input);
@@ -38,6 +48,11 @@ TEST(FlexTokenizerTest, AlternatingPeekAndNext) {
     EXPECT_EQ(tz.next().type, TokenType::Colon);
 }
 
+/**
+ * Проверяет обработку пустого входа — лексер должен сразу
+ * возвращать Eof при peek() и next(), а повторный next() после Eof
+ * также возвращает Eof (идемпотентность).
+ */
 TEST(FlexTokenizerTest, EofIsHandledCorrectly) {
     std::istringstream input("");
     FlexTokenizer tz(input);
@@ -48,6 +63,11 @@ TEST(FlexTokenizerTest, EofIsHandledCorrectly) {
     EXPECT_EQ(tz.next().type, TokenType::Eof);
 }
 
+/**
+ * Проверяет разбор литеральных значений: целое число, вещественное число, строка.
+ * Вход: 12345   3.1415   "hello world"
+ * Ожидание: intValue=12345, realValue=3.1415, text="hello world".
+ */
 TEST(FlexTokenizerTest, LiteralValuesParsing) {
     std::istringstream input("12345   3.1415   \"hello world\"");
     FlexTokenizer tz(input);
@@ -65,6 +85,11 @@ TEST(FlexTokenizerTest, LiteralValuesParsing) {
     EXPECT_EQ(tStr.text, "hello world");
 }
 
+/**
+ * Проверяет правило «максимального захвата» (maximum munch) для операторов.
+ * Вход: < <= : := . ..
+ * Лексер должен различать Lt/Le, Colon/Assign, Dot/Range.
+ */
 TEST(FlexTokenizerTest, OperatorsAndMaximumMunch) {
     std::istringstream input("< <= : := . ..");
     FlexTokenizer tz(input);
@@ -77,6 +102,11 @@ TEST(FlexTokenizerTest, OperatorsAndMaximumMunch) {
     EXPECT_EQ(tz.next().type, TokenType::Range);
 }
 
+/**
+ * Проверяет, что пробельные символы и комментарии (* ... *) пропускаются.
+ * Вход: "   \\n\\t  (* this is a comment *)  \\n  BEGIN"
+ * Ожидание: единственный токен KW_BEGIN.
+ */
 TEST(FlexTokenizerTest, IgnoresWhitespaceAndComments) {
     std::istringstream input("   \n\t  (* this is a comment *)  \n  BEGIN");
     FlexTokenizer tz(input);
@@ -85,6 +115,11 @@ TEST(FlexTokenizerTest, IgnoresWhitespaceAndComments) {
     EXPECT_EQ(t.type, TokenType::KW_BEGIN);
 }
 
+/**
+ * Проверяет отслеживание позиции (строка:столбец) токенов.
+ * Вход: "MODULE\\n  Test;"
+ * MODULE — строка 1, столбец 1; Test — строка 2, столбец 3.
+ */
 TEST(FlexTokenizerTest, TracksLineAndColumn) {
     std::istringstream input("MODULE\n  Test;");
     FlexTokenizer tz(input);
@@ -98,6 +133,11 @@ TEST(FlexTokenizerTest, TracksLineAndColumn) {
     EXPECT_EQ(t2.col, 3);
 }
 
+/**
+ * Проверяет, что недопустимые символы ($ и %) распознаются как Unknown.
+ * Вход: VAR $ x %
+ * Ожидание: KW_VAR, Unknown("$"), Ident("x"), Unknown("%").
+ */
 TEST(FlexTokenizerTest, CapturesUnknownCharacters) {
     std::istringstream input("VAR $ x %");
     FlexTokenizer tz(input);

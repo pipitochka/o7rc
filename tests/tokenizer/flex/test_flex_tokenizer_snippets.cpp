@@ -4,14 +4,28 @@
 
 #include <tokenizer/impl/flex/FlexTokenizer.h>
 
+/**
+ * Параметр для параметризованного теста сниппетов:
+ * имя теста, исходный код и ожидаемая последовательность типов токенов.
+ */
 struct SnippetTestCase {
     std::string name;
     std::string code;
     std::vector<TokenType> expected;
 };
 
+/**
+ * Параметризованный набор тестов: проверяет, что лексер Flex
+ * порождает ожидаемую последовательность токенов для фрагментов
+ * реального кода Oberon-7.
+ */
 class FlexTokenizerSnippetsTest : public ::testing::TestWithParam<SnippetTestCase> {};
 
+/**
+ * Запускает лексер на фрагменте кода из параметра и проверяет,
+ * что каждый выданный токен совпадает по типу с ожидаемым.
+ * В конце убеждается, что после всех ожидаемых токенов идёт Eof.
+ */
 TEST_P(FlexTokenizerSnippetsTest, TokenizesCorrectly) {
     const auto &param = GetParam();
     std::istringstream input(param.code);
@@ -29,6 +43,18 @@ TEST_P(FlexTokenizerSnippetsTest, TokenizesCorrectly) {
     EXPECT_EQ(tz.next().type, TokenType::Eof) << "Expected EOF at the end of test case: " << param.name;
 }
 
+/**
+ * Набор сниппетов Oberon-7 для интеграционного тестирования лексера.
+ *
+ * TightMath           — арифметика без пробелов: x:=a+b*c-10/2;
+ * LogicalCondition    — логическое выражение с IF, OR, &, ~, скобками.
+ * Selectors           — индексация, поле, разыменование: arr[i+1].field^:=NIL
+ * SetsAndRanges       — множества с диапазонами: {0, 5..10}
+ * ProcedureSignature  — сигнатура процедуры с экспортом (*) и VAR-параметром.
+ * VarDeclarations     — объявления переменных и указателя.
+ * ComplexAlgorithms   — три полные процедуры (ReadInt, WriteInt, log2)
+ *                       с циклами WHILE/REPEAT, вызовами функций, RETURN.
+ */
 INSTANTIATE_TEST_SUITE_P(
         OberonSnippets, FlexTokenizerSnippetsTest,
         ::testing::Values(
