@@ -77,39 +77,38 @@ TEST_F(BisonParserExprTest, ParsesDesignatorChain) {
 
     auto* des = dynamic_cast<DesignatorExpr*>(getFirstAssignmentExpr(mod.get()));
     ASSERT_NE(des, nullptr);
-    EXPECT_EQ(des->baseName, "a");
+    EXPECT_EQ(des->baseName, "a.b");
 
-    ASSERT_EQ(des->selectors.size(), 4);
+    ASSERT_EQ(des->selectors.size(), 3);
 
-    auto* s1 = dynamic_cast<FieldSelector*>(des->selectors[0].get());
+    auto* s1 = dynamic_cast<IndexSelector*>(des->selectors[0].get());
     ASSERT_NE(s1, nullptr);
-    EXPECT_EQ(s1->name, "b");
-
-    auto* s2 = dynamic_cast<IndexSelector*>(des->selectors[1].get());
-    ASSERT_NE(s2, nullptr);
-    ASSERT_EQ(s2->index.size(), 1);
-    auto* idxVal = dynamic_cast<LiteralExpr*>(s2->index[0].get());
+    ASSERT_EQ(s1->index.size(), 1);
+    auto* idxVal = dynamic_cast<LiteralExpr*>(s1->index[0].get());
     EXPECT_EQ(idxVal->intValue, 10);
 
-    auto* s3 = dynamic_cast<DerefSelector*>(des->selectors[2].get());
-    ASSERT_NE(s3, nullptr);
+    auto* s2 = dynamic_cast<DerefSelector*>(des->selectors[1].get());
+    ASSERT_NE(s2, nullptr);
 
-    auto* s4 = dynamic_cast<FieldSelector*>(des->selectors[3].get());
-    ASSERT_NE(s4, nullptr);
-    EXPECT_EQ(s4->name, "c");
+    auto* s3 = dynamic_cast<FieldSelector*>(des->selectors[2].get());
+    ASSERT_NE(s3, nullptr);
+    EXPECT_EQ(s3->name, "c");
 }
 
 TEST_F(BisonParserExprTest, ParsesFunctionCall) {
     auto mod = parseModule("x := Math.Sin(3.14)");
 
-    auto* call = dynamic_cast<CallExpr*>(getFirstAssignmentExpr(mod.get()));
-    ASSERT_NE(call, nullptr);
+    auto* des = dynamic_cast<DesignatorExpr*>(getFirstAssignmentExpr(mod.get()));
+    ASSERT_NE(des, nullptr);
+    EXPECT_EQ(des->baseName, "Math.Sin");
 
-    auto* callee = dynamic_cast<DesignatorExpr*>(call->callee.get());
-    EXPECT_EQ(callee->baseName, "Math.Sin");
+    ASSERT_EQ(des->selectors.size(), 1);
+    auto* args = dynamic_cast<ArgsSelector*>(des->selectors[0].get());
+    ASSERT_NE(args, nullptr);
 
-    ASSERT_EQ(call->args.size(), 1);
-    auto* arg = dynamic_cast<LiteralExpr*>(call->args[0].get());
+    ASSERT_EQ(args->args.size(), 1);
+    auto* arg = dynamic_cast<LiteralExpr*>(args->args[0].get());
+    ASSERT_NE(arg, nullptr);
     EXPECT_DOUBLE_EQ(arg->realValue, 3.14);
 }
 
