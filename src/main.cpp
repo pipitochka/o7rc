@@ -52,7 +52,7 @@ int main() {
     }
 
     buffered->print();
-    
+
     tokenizer = std::move(buffered);
 
 #endif

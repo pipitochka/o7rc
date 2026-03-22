@@ -38,9 +38,9 @@ struct CallExpr final : Expr {
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
-//used
+// used
 struct UnaryExpr final : Expr {
-    enum class Op { Neg, Not} op = Op::Neg;
+    enum class Op { Neg, Not } op = Op::Neg;
     ExprPtr rhs;
 
     void accept(IVisitor &v) override { v.visit(*this); }
@@ -58,7 +58,7 @@ struct SetExpr final : Expr {
 };
 
 
-//used
+// used
 struct BinaryExpr final : Expr {
     enum class Op { Or, And, Eq, Neq, Lt, Le, Gt, Ge, Add, Sub, Mul, RDiv, IDiv, Mod, In, Is, None } op = Op::None;
 

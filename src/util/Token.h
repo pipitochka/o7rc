@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
-#include <string>
 #include <iostream>
+#include <string>
 
 
 enum class TokenType : std::uint16_t {
@@ -92,95 +92,156 @@ struct Token {
     double realValue = 0.0;
 };
 
-inline const char* toString(TokenType t)
-{
+inline const char *toString(TokenType t) {
     switch (t) {
         // ----- специальные -----
-        case TokenType::Eof:      return "Eof";
-        case TokenType::Unknown:  return "Unknown";
+        case TokenType::Eof:
+            return "Eof";
+        case TokenType::Unknown:
+            return "Unknown";
 
         // ----- литералы -----
-        case TokenType::Ident:    return "Ident";
-        case TokenType::Integer:  return "Integer";
-        case TokenType::Real:     return "Real";
-        case TokenType::String:   return "String";
+        case TokenType::Ident:
+            return "Ident";
+        case TokenType::Integer:
+            return "Integer";
+        case TokenType::Real:
+            return "Real";
+        case TokenType::String:
+            return "String";
 
         // ----- операторы -----
-        case TokenType::Plus:     return "Plus";
-        case TokenType::Minus:    return "Minus";
-        case TokenType::Star:     return "Star";
-        case TokenType::Slash:    return "Slash";
-        case TokenType::Eq:       return "Eq";
-        case TokenType::Neq:      return "Neq";
-        case TokenType::Lt:       return "Lt";
-        case TokenType::Le:       return "Le";
-        case TokenType::Gt:       return "Gt";
-        case TokenType::Ge:       return "Ge";
-        case TokenType::Assign:   return "Assign";
-        case TokenType::Caret:    return "Caret";
-        case TokenType::Amp:      return "Amp";
-        case TokenType::Tilde:    return "Tilde";
-        case TokenType::Bar:      return "Bar";
-        case TokenType::Range:    return "Range";
+        case TokenType::Plus:
+            return "Plus";
+        case TokenType::Minus:
+            return "Minus";
+        case TokenType::Star:
+            return "Star";
+        case TokenType::Slash:
+            return "Slash";
+        case TokenType::Eq:
+            return "Eq";
+        case TokenType::Neq:
+            return "Neq";
+        case TokenType::Lt:
+            return "Lt";
+        case TokenType::Le:
+            return "Le";
+        case TokenType::Gt:
+            return "Gt";
+        case TokenType::Ge:
+            return "Ge";
+        case TokenType::Assign:
+            return "Assign";
+        case TokenType::Caret:
+            return "Caret";
+        case TokenType::Amp:
+            return "Amp";
+        case TokenType::Tilde:
+            return "Tilde";
+        case TokenType::Bar:
+            return "Bar";
+        case TokenType::Range:
+            return "Range";
 
         // ----- пунктуация -----
-        case TokenType::LParen:   return "LParen";
-        case TokenType::RParen:   return "RParen";
-        case TokenType::LBrack:   return "LBrack";
-        case TokenType::RBrack:   return "RBrack";
-        case TokenType::LBrace:   return "LBrace";
-        case TokenType::RBrace:   return "RBrace";
-        case TokenType::Comma:    return "Comma";
-        case TokenType::Semicolon:return "Semicolon";
-        case TokenType::Colon:    return "Colon";
-        case TokenType::Dot:      return "Dot";
+        case TokenType::LParen:
+            return "LParen";
+        case TokenType::RParen:
+            return "RParen";
+        case TokenType::LBrack:
+            return "LBrack";
+        case TokenType::RBrack:
+            return "RBrack";
+        case TokenType::LBrace:
+            return "LBrace";
+        case TokenType::RBrace:
+            return "RBrace";
+        case TokenType::Comma:
+            return "Comma";
+        case TokenType::Semicolon:
+            return "Semicolon";
+        case TokenType::Colon:
+            return "Colon";
+        case TokenType::Dot:
+            return "Dot";
 
         // ----- ключевые слова -----
-        case TokenType::KW_ARRAY:       return "KW_ARRAY";
-        case TokenType::KW_BEGIN:       return "KW_BEGIN";
-        case TokenType::KW_BY:          return "KW_BY";
-        case TokenType::KW_CASE:        return "KW_CASE";
-        case TokenType::KW_CONST:       return "KW_CONST";
-        case TokenType::KW_DIV:         return "KW_DIV";
-        case TokenType::KW_DO:          return "KW_DO";
-        case TokenType::KW_ELSE:        return "KW_ELSE";
-        case TokenType::KW_ELSIF:       return "KW_ELSIF";
-        case TokenType::KW_END:         return "KW_END";
-        case TokenType::KW_FALSE:       return "KW_FALSE";
-        case TokenType::KW_FOR:         return "KW_FOR";
-        case TokenType::KW_IF:          return "KW_IF";
-        case TokenType::KW_IMPORT:      return "KW_IMPORT";
-        case TokenType::KW_IN:          return "KW_IN";
-        case TokenType::KW_IS:          return "KW_IS";
-        case TokenType::KW_MOD:         return "KW_MOD";
-        case TokenType::KW_MODULE:      return "KW_MODULE";
-        case TokenType::KW_NIL:         return "KW_NIL";
-        case TokenType::KW_OF:          return "KW_OF";
-        case TokenType::KW_OR:          return "KW_OR";
-        case TokenType::KW_POINTER:     return "KW_POINTER";
-        case TokenType::KW_PROCEDURE:   return "KW_PROCEDURE";
-        case TokenType::KW_RECORD:      return "KW_RECORD";
-        case TokenType::KW_REPEAT:      return "KW_REPEAT";
-        case TokenType::KW_RETURN:      return "KW_RETURN";
-        case TokenType::KW_THEN:        return "KW_THEN";
-        case TokenType::KW_TO:          return "KW_TO";
-        case TokenType::KW_TRUE:        return "KW_TRUE";
-        case TokenType::KW_TYPE:        return "KW_TYPE";
-        case TokenType::KW_UNTIL:       return "KW_UNTIL";
-        case TokenType::KW_VAR:         return "KW_VAR";
-        case TokenType::KW_WHILE:       return "KW_WHILE";
+        case TokenType::KW_ARRAY:
+            return "KW_ARRAY";
+        case TokenType::KW_BEGIN:
+            return "KW_BEGIN";
+        case TokenType::KW_BY:
+            return "KW_BY";
+        case TokenType::KW_CASE:
+            return "KW_CASE";
+        case TokenType::KW_CONST:
+            return "KW_CONST";
+        case TokenType::KW_DIV:
+            return "KW_DIV";
+        case TokenType::KW_DO:
+            return "KW_DO";
+        case TokenType::KW_ELSE:
+            return "KW_ELSE";
+        case TokenType::KW_ELSIF:
+            return "KW_ELSIF";
+        case TokenType::KW_END:
+            return "KW_END";
+        case TokenType::KW_FALSE:
+            return "KW_FALSE";
+        case TokenType::KW_FOR:
+            return "KW_FOR";
+        case TokenType::KW_IF:
+            return "KW_IF";
+        case TokenType::KW_IMPORT:
+            return "KW_IMPORT";
+        case TokenType::KW_IN:
+            return "KW_IN";
+        case TokenType::KW_IS:
+            return "KW_IS";
+        case TokenType::KW_MOD:
+            return "KW_MOD";
+        case TokenType::KW_MODULE:
+            return "KW_MODULE";
+        case TokenType::KW_NIL:
+            return "KW_NIL";
+        case TokenType::KW_OF:
+            return "KW_OF";
+        case TokenType::KW_OR:
+            return "KW_OR";
+        case TokenType::KW_POINTER:
+            return "KW_POINTER";
+        case TokenType::KW_PROCEDURE:
+            return "KW_PROCEDURE";
+        case TokenType::KW_RECORD:
+            return "KW_RECORD";
+        case TokenType::KW_REPEAT:
+            return "KW_REPEAT";
+        case TokenType::KW_RETURN:
+            return "KW_RETURN";
+        case TokenType::KW_THEN:
+            return "KW_THEN";
+        case TokenType::KW_TO:
+            return "KW_TO";
+        case TokenType::KW_TRUE:
+            return "KW_TRUE";
+        case TokenType::KW_TYPE:
+            return "KW_TYPE";
+        case TokenType::KW_UNTIL:
+            return "KW_UNTIL";
+        case TokenType::KW_VAR:
+            return "KW_VAR";
+        case TokenType::KW_WHILE:
+            return "KW_WHILE";
 
-        default: return "???";
+        default:
+            return "???";
     }
 }
 
-inline std::ostream& operator<<(std::ostream& os, const TokenType& t)
-{
-    return os << toString(t);
-}
+inline std::ostream &operator<<(std::ostream &os, const TokenType &t) { return os << toString(t); }
 
-inline std::ostream& operator<<(std::ostream& os, const Token& tk)
-{
+inline std::ostream &operator<<(std::ostream &os, const Token &tk) {
     os << '[' << tk.type << "] "
        << "text='" << tk.text << "' "
        << "(line:" << tk.line << ", col:" << tk.col << ')';
@@ -191,4 +252,3 @@ inline std::ostream& operator<<(std::ostream& os, const Token& tk)
     os << std::endl;
     return os;
 }
-

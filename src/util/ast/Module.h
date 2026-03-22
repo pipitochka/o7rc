@@ -19,7 +19,7 @@ struct Module final : Node {
     std::vector<Import> imports;
     std::vector<DeclPtr> decls;
     std::vector<StmtPtr> block;
-    
+
 
     void accept(IVisitor &v) override { v.visit(*this); }
 };

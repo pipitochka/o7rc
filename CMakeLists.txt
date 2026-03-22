@@ -101,6 +101,7 @@ else()
     message(FATAL_ERROR "No lexer selected!")
 endif()
 if(USE_DEBUG)
+    message("Use debug")
     target_sources(core PRIVATE
             ${SRC_DIR}/tokenizer/impl/debug/BufferedTokenizer.cpp
     )

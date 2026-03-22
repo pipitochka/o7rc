@@ -28,7 +28,7 @@ struct ReturnStmt final : Stmt {
 
 struct IfStmt final : Stmt {
     std::vector<Branch> branches;
-    std::vector<StmtPtr> elseBody; 
+    std::vector<StmtPtr> elseBody;
 
     void accept(IVisitor &v) override { v.visit(*this); }
 };

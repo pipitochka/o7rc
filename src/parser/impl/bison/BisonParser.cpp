@@ -10,5 +10,4 @@ ModulePtr BisonParser::parse(ITokenizerPtr tz) {
     ctx.tz = tz;
     yyparse(&ctx);
     return std::move(ctx.module);
-    ;
 }

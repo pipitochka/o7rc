@@ -5,21 +5,21 @@
 #include <string>
 #include <vector>
 
-//used
+// used
 struct ConstDecl final : Decl {
     std::string name;
     Ptr<Expr> value;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
-//used
+// used
 struct TypeDecl final : Decl {
     std::string name;
     TypePtr type;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
-//used
+// used
 struct VarDecl final : Decl {
     std::vector<std::string> names;
     TypePtr type;
@@ -37,7 +37,7 @@ struct ProcDecl final : Decl {
     std::string name;
     TypePtr type;
     std::vector<DeclPtr> params;
-    ExprPtr returnValue; 
+    ExprPtr returnValue;
     std::vector<StmtPtr> body;
 
     void accept(IVisitor &v) override { v.visit(*this); }

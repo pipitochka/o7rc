@@ -21,6 +21,6 @@ struct DerefSelector final : Selector {
 };
 
 struct TypeGuardSelector final : Selector {
-    std::string typeName;  
+    std::string typeName;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
