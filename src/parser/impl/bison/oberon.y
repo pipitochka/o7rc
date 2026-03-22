@@ -389,6 +389,7 @@ FormalParametersLOpt: %empty {
 FPSectionList: FPSection {
 	auto* data = new std::vector<ProcParams*>();
 	data->push_back($1);
+	$$ = data;
 } | FPSectionList TOK_SEMICOLON FPSection {
 	$1->push_back($3);
 	$$ = $1;
@@ -398,10 +399,11 @@ FPSectionList: FPSection {
 //return ProcParams*
 FPSection: TOK_KW_VAR identList TOK_COLON FormalType {
 	auto* data = new ProcParams();
-	for (auto el: *$2){ 
+	for (auto el: *$2){
 	    data->names.push_back(el);    
 	}
 	data->type.reset($4);
+	delete $2;
 	$$ = data;
 } | identList TOK_COLON FormalType { 
     auto* data = new ProcParams();
@@ -409,6 +411,7 @@ FPSection: TOK_KW_VAR identList TOK_COLON FormalType {
         data->names.push_back(el);    
     }
     data->type.reset($3);
+    delete $1;
     $$ = data;
 };
 
