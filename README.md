@@ -3,14 +3,29 @@
 **o7rc** — кросс-компилятор языка Oberon-7 в ассемблер RISC-V (RV32IM), совместимый с симулятором [RARS](https://github.com/TheThirdOne/rars).
 
 ## Оглавление
+- [Docker](#docker)
 - [Функционал](#функционал)
 - [Зависимости](#зависимости)
 - [Сборка](#сборка)
 - [Запуск](#запуск)
 - [Тестирование](#тестирование)
-- [Docker](#docker)
 - [Синтаксис Oberon-7](#синтаксис-oberon-7)
 
+---
+## Docker
+
+```bash
+# Сборка образа
+docker build -t o7rc .
+
+# Запуск контейнера
+docker run -it --rm -v "$(pwd)":/work o7rc
+
+# Внутри контейнера:
+mkdir build && cd build
+cmake .. && cmake --build . --parallel
+ctest --output-on-failure
+```
 ---
 
 ## Функционал
@@ -19,7 +34,7 @@
 |---|---|
 | **Лексер** | Flex — токенизация исходного кода Oberon-7 |
 | **Парсер** | Bison — построение AST по грамматике Oberon-7 |
-| **Кодогенерация** | Генерация RISC-V ассемблера (RV32IM) из AST |
+| **Кодогенерация** | Генерация RISC-V ассемблера из AST |
 | **E2E-тесты** | Сравнение вывода o7rc+RARS с эталонным компилятором OBNC |
 
 ---
@@ -38,8 +53,8 @@
 ### Для E2E-тестов (опционально)
 
 | Пакет | Версия | Назначение |
-|---|---|---|
-| Java (JRE) | >= 8 | Запуск RARS |
+|---|-------|---|
+| Java (JRE) | >= 8  | Запуск RARS |
 | libgc-dev / bdw-gc | любая | Зависимость OBNC (Boehm GC) |
 
 RARS и OBNC скачиваются и собираются автоматически при сборке с `-DUSE_RARS=ON`.
@@ -75,17 +90,17 @@ cmake --build . --parallel
 ### Опции CMake
 
 | Опция | По умолчанию | Описание |
-|---|---|---|
-| `USE_FLEX` | `ON` | Использовать Flex-лексер |
-| `USE_BISON` | `ON` | Использовать Bison-парсер |
-| `USE_CODEGEN` | `ON` | Включить кодогенерацию RISC-V |
-| `USE_RARS` | `OFF` | Скачать RARS и включить e2e-тесты |
-| `USE_DEBUG` | `OFF` | Дополнительный отладочный вывод |
+|---|--------------|---|
+| `USE_FLEX` | `ON`         | Использовать Flex-лексер |
+| `USE_BISON` | `ON`         | Использовать Bison-парсер |
+| `USE_CODEGEN` | `ON`         | Включить кодогенерацию RISC-V |
+| `USE_RARS` | `ON`         | Скачать RARS и включить e2e-тесты |
+| `USE_DEBUG` | `OFF`        | Дополнительный отладочный вывод |
 
-Пример сборки со всеми тестами:
+Пример сборки с дополнительным отладочным выводом:
 
 ```bash
-cmake .. -DUSE_RARS=ON
+cmake .. -DUSE_DEBUG=ON
 cmake --build . --parallel
 ```
 
@@ -136,22 +151,6 @@ ctest -L e2e --output-on-failure
 ctest --test-dir build --output-on-failure
 ```
 
----
-
-## Docker
-
-```bash
-# Сборка образа
-docker build -t o7rc .
-
-# Запуск контейнера
-docker run -it --rm -v "$(pwd)":/work o7rc
-
-# Внутри контейнера:
-mkdir build && cd build
-cmake .. -DUSE_RARS=ON && cmake --build . --parallel
-ctest --output-on-failure
-```
 
 ---
 

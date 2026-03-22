@@ -26,7 +26,6 @@ ASM="${TMPDIR}/${TEST_NAME}.asm"
 cleanup() { rm -rf "${TMPDIR}"; }
 trap cleanup EXIT
 
-# OBNC требует файл с именем модуля.obn
 MODULE_NAME=$(sed -n 's/^MODULE \([A-Za-z_][A-Za-z0-9_]*\).*/\1/p' "${SOURCE}" | head -1)
 if [ -z "${MODULE_NAME}" ]; then
     echo "FAIL [${TEST_NAME}]: cannot extract MODULE name"
@@ -37,7 +36,6 @@ OBNC_DIR="${TMPDIR}/obnc_build"
 mkdir -p "${OBNC_DIR}"
 cp "${SOURCE}" "${OBNC_DIR}/${MODULE_NAME}.obn"
 
-# 1. Эталон: компиляция и запуск через OBNC
 OBNC_BIN_DIR=$(dirname "${OBNC}")
 OBNC_PREFIX=$(cd "${OBNC_BIN_DIR}/.." && pwd)
 
@@ -55,14 +53,12 @@ EXPECTED=$("${OBNC_DIR}/${MODULE_NAME}" 2>/dev/null) || {
     exit 4
 }
 
-# 2. Наш компилятор: .obr → .asm
 if ! "${O7RC}" "${SOURCE}" -o "${ASM}" 2>"${TMPDIR}/compile.err"; then
     echo "FAIL [${TEST_NAME}]: o7rc compilation error"
     cat "${TMPDIR}/compile.err"
     exit 1
 fi
 
-# 3. Запуск .asm в RARS
 ACTUAL=$("${JAVA}" -jar "${RARS_JAR}" nc sm "${ASM}" 2>"${TMPDIR}/rars.err") || {
     RC=$?
     echo "FAIL [${TEST_NAME}]: RARS exited with code ${RC}"
@@ -72,7 +68,6 @@ ACTUAL=$("${JAVA}" -jar "${RARS_JAR}" nc sm "${ASM}" 2>"${TMPDIR}/rars.err") || 
     exit 2
 }
 
-# 4. Сравнение: OBNC (эталон) vs o7rc+RARS
 if [ "${ACTUAL}" = "${EXPECTED}" ]; then
     echo "PASS [${TEST_NAME}]"
     exit 0

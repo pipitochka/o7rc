@@ -15,7 +15,7 @@ option(USE_FLEX    "Build Flex tokenizer"         ON)
 option(USE_BISON   "Build Bison parser"           ON)
 option(USE_DEBUG   "More info"                    OFF)
 option(USE_CODEGEN "Build RISC-V code generator"  ON)
-option(USE_RARS    "Use RARS"  ON)
+option(USE_RARS    "Use RARS to tests"            ON)
 
 
 include(FetchContent)
@@ -150,9 +150,6 @@ target_link_libraries(o7rc_tests
 include(GoogleTest)
 gtest_discover_tests(o7rc_tests)
 
-# ── End-to-end тесты: o7rc+RARS vs OBNC (эталон) ────────────
-option(USE_RARS "Download RARS/OBNC and enable e2e tests" OFF)
-
 if(USE_RARS)
     find_package(Java QUIET COMPONENTS Runtime)
     if(NOT Java_FOUND)
@@ -160,7 +157,6 @@ if(USE_RARS)
     else()
         message(STATUS "Java found: ${Java_JAVA_EXECUTABLE}")
 
-        # ── RARS ──
         set(RARS_VERSION "1.6")
         set(RARS_JAR "${CMAKE_BINARY_DIR}/rars.jar")
         if(NOT EXISTS "${RARS_JAR}")
@@ -178,7 +174,6 @@ if(USE_RARS)
             endif()
         endif()
 
-        # ── OBNC ──
         set(OBNC_VERSION "0.17.2")
         set(OBNC_PREFIX "${CMAKE_BINARY_DIR}/obnc-install")
         set(OBNC_BIN "${OBNC_PREFIX}/bin/obnc")
@@ -235,7 +230,6 @@ if(USE_RARS)
             message(WARNING "OBNC not available — e2e tests disabled")
         endif()
 
-        # ── Найти libgc для линковки OBNC-скомпилированных программ ──
         set(GC_LIB_DIR "")
         find_library(GC_LIBRARY NAMES gc PATHS /opt/homebrew/lib /usr/local/lib /usr/lib)
         if(GC_LIBRARY)
@@ -247,7 +241,6 @@ if(USE_RARS)
             message(STATUS "gc.h found: ${GC_INCLUDE_DIR}")
         endif()
 
-        # ── Регистрация тестов ──
         if(RARS_JAR AND OBNC_BIN)
             set(E2E_DIR "${CMAKE_SOURCE_DIR}/tests/e2e")
             set(E2E_RUNNER "${E2E_DIR}/run_test.sh")
