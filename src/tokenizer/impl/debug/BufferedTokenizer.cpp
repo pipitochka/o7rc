@@ -16,6 +16,9 @@ Token BufferedTokenizer::peek() {
     if (pos < tokens.size()) {
         return tokens[pos];
     }
+    if (!tokens.empty()) {
+        return tokens.back();
+    }
     return Token{TokenType::Eof, "", 0, 0};
 }
 

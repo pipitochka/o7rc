@@ -8,20 +8,21 @@
 // used
 struct ConstDecl final : Decl {
     std::string name;
+    bool exported = false;
     Ptr<Expr> value;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
-// used
 struct TypeDecl final : Decl {
     std::string name;
+    bool exported = false;
     TypePtr type;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 
-// used
 struct VarDecl final : Decl {
     std::vector<std::string> names;
+    std::vector<bool> exportedFlags;
     TypePtr type;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
@@ -35,8 +36,9 @@ struct ParamDecl final : Decl {
 
 struct ProcDecl final : Decl {
     std::string name;
+    bool exported = false;
     TypePtr type;
-    std::vector<DeclPtr> params;
+    std::vector<DeclPtr> decls;
     ExprPtr returnValue;
     std::vector<StmtPtr> body;
 

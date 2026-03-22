@@ -24,3 +24,8 @@ struct TypeGuardSelector final : Selector {
     std::string typeName;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
+
+struct ArgsSelector final : Selector {
+    std::vector<ExprPtr> args;
+    void accept(IVisitor &v) override { v.visit(*this); }
+};

@@ -41,6 +41,7 @@ struct RecordType final : TypeNode {
 
 // used
 struct ProcParams final : Node {
+    bool isVar = false;
     std::vector<std::string> names;
     TypePtr type;
     void accept(IVisitor &v) override { v.visit(*this); }

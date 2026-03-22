@@ -17,7 +17,7 @@ struct AssignStmt final : Stmt {
 };
 
 struct CallStmt final : Stmt {
-    Ptr<CallExpr> call;
+    Ptr<DesignatorExpr> designator;
     void accept(IVisitor &v) override { v.visit(*this); }
 };
 

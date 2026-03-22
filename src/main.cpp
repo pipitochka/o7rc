@@ -74,4 +74,6 @@ int main() {
     }
 
     auto result = parser->parse(tokenizer);
+
+    return 0;
 }

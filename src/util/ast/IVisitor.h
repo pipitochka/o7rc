@@ -42,7 +42,7 @@ struct IVisitor {
     virtual void visit(IndexSelector &) = 0;
     virtual void visit(DerefSelector &) = 0;
     virtual void visit(TypeGuardSelector &) = 0;
-
+    virtual void visit(ArgsSelector &) = 0;
 
     virtual void visit(CaseAlternative &) = 0;
     virtual void visit(CaseLabel &) = 0;

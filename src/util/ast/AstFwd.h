@@ -48,6 +48,7 @@ struct FieldSelector;
 struct IndexSelector;
 struct DerefSelector;
 struct TypeGuardSelector;
+struct ArgsSelector;
 
 struct CaseAlternative;
 struct CaseLabel;

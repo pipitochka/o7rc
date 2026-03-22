@@ -4,7 +4,7 @@ MODULE Out; (*exported procedures: Write, WriteInt, WriteLn*)
     
     PROCEDURE Write*(ch: CHAR);
     BEGIN Texts.Write(W, ch)
-    END;
+    END Write;
 
     PROCEDURE WriteInt*(x, n: INTEGER);
         VAR i: INTEGER; a: ARRAY 16 OF CHAR;
