@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <unordered_map>
+#include <memory>
 #include <vector>
 
 /// Описание типа для кодогенерации (RV32: все базовые = 4 байта).
