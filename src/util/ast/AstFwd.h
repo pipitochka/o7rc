@@ -42,8 +42,6 @@ struct BinaryExpr;
 struct CallExpr;
 struct DesignatorExpr;
 struct SetExpr;
-struct IsExpr;
-struct InExpr;
 
 struct Selector;
 struct FieldSelector;

@@ -25,8 +25,12 @@
 
 static void yyerror(ParserContext* ctx, const char* msg) {
   if (ctx) ctx->lastError = msg;
-  std::fprintf(stderr, "parse error: %s\n", msg);
+    Token t = ctx->tz->peek();
+
+  std::fprintf(stderr, "Parse error at %d:%d: %s. Found token: '%s'\n",
+      t.line, t.col, msg, t.text.c_str());
 }
+
 
 template<typename T>
 static void deleteVec(std::vector<T*>* v) {
@@ -960,6 +964,14 @@ ForStatement: TOK_KW_FOR TOK_IDENT TOK_ASSIGN expression TOK_KW_TO expression TO
 
 
 ProcedureDeclaration: ProcedureHeading TOK_SEMICOLON ProcedureBody TOK_IDENT {
+    if ($1->name != $4->text) {
+        std::string msg = "Procedure name mismatch: expected '" + $1->name +
+                          "', but found '" + $4->text + "'";
+
+        std::string fullMsg = msg + " at line " + std::to_string($4->line);
+        yyerror(ctx, fullMsg.c_str());
+        YYERROR;
+    }
 	$3->name = $1->name;
 	$3->type = std::move($1->type);
 	delete $1;
@@ -1038,15 +1050,13 @@ ConstDeclarationOpt: %empty {
 	$$ = $2;
 }
 
-ConstDeclarationList: %empty {
-	$$ = new std::vector<Decl*>;
-} | ConstDeclaration {
-	auto* ptr = new std::vector<Decl*>;
-	ptr->push_back($1);
-	$$ = ptr;
-} | ConstDeclarationList TOK_SEMICOLON ConstDeclaration {
-	$1->push_back($3);
-	$$ = $1;
+ConstDeclarationList: ConstDeclaration TOK_SEMICOLON {
+    auto* ptr = new std::vector<Decl*>;
+    ptr->push_back($1);
+    $$ = ptr;
+} | ConstDeclarationList ConstDeclaration TOK_SEMICOLON {
+    $1->push_back($2);
+    $$ = $1;
 };
 
 TypeDeclarationOpt: %empty {
@@ -1055,15 +1065,13 @@ TypeDeclarationOpt: %empty {
 	$$ = $2;
 }
 
-TypeDeclarationList: %empty {
-	$$ = new std::vector<Decl*>;
-} | TypeDeclaration  {
-	auto* ptr = new std::vector<Decl*>;
-	ptr->push_back($1);
-	$$ = ptr;
-} | TypeDeclarationList TOK_SEMICOLON TypeDeclaration  {
-	$1->push_back($3);
-        $$ = $1;
+TypeDeclarationList: TypeDeclaration TOK_SEMICOLON {
+    auto* ptr = new std::vector<Decl*>;
+    ptr->push_back($1);
+    $$ = ptr;
+} | TypeDeclarationList TypeDeclaration TOK_SEMICOLON {
+    $1->push_back($2);
+    $$ = $1;
 };
 
 VariableDeclarationOpt: %empty {
@@ -1072,26 +1080,18 @@ VariableDeclarationOpt: %empty {
 	$$ = $2;
 };
 
-VariableDeclarationList: %empty {
-	$$ = new std::vector<Decl*>;
-} | VariableDeclaration {
-	auto* ptr = new std::vector<Decl*>;
-	ptr->push_back($1);
-	$$ = ptr;
-} | VariableDeclarationList TOK_SEMICOLON VariableDeclaration {
-	$1->push_back($3);
-	$$ = $1;
+VariableDeclarationList: VariableDeclaration TOK_SEMICOLON {
+    auto* ptr = new std::vector<Decl*>;
+    ptr->push_back($1);
+    $$ = ptr;
+} | VariableDeclarationList VariableDeclaration TOK_SEMICOLON {
+    $1->push_back($2);
+    $$ = $1;
 };
 
 ProcedureDeclarationList: %empty {
 	$$ = new std::vector<Decl*>();
-} | ProcedureDeclaration {
-	auto* ptr = new std::vector<Decl*>();
-	ptr->push_back($1);
-	$$ = ptr;
 } | ProcedureDeclarationList ProcedureDeclaration TOK_SEMICOLON {
-    // В Обероне каждая процедура закрывается своим именем: END MyProc ;
-    // Поэтому разделение процедур работает иначе, чем у обычных листов.
 	$1->push_back($2);
     $$ = $1;
 };

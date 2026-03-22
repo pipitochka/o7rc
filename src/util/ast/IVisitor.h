@@ -36,8 +36,6 @@ struct IVisitor {
     virtual void visit(BinaryExpr &) = 0;
     virtual void visit(CallExpr &) = 0;
     virtual void visit(DesignatorExpr &) = 0;
-    virtual void visit(IsExpr &) = 0;
-    virtual void visit(InExpr &) = 0;
     virtual void visit(SetExpr &) = 0;
 
     virtual void visit(FieldSelector &) = 0;
