@@ -43,8 +43,8 @@ void oberon_reset_positions() {
 
 DIGIT     [0-9]
 HEXDIGIT  [0-9A-F]
-LETTER    [A-Za-z_]
-IDREST    [A-Za-z0-9_]
+LETTER    [A-Za-z]
+IDREST    [A-Za-z0-9]
 
 %%
 
