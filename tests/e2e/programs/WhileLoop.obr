@@ -1,0 +1,12 @@
+MODULE WhileLoop;
+IMPORT Out;
+VAR i, sum: INTEGER;
+BEGIN
+    sum := 0;
+    i := 1;
+    WHILE i <= 10 DO
+        sum := sum + i;
+        INC(i)
+    END;
+    Out.Int(sum, 0)
+END WhileLoop.

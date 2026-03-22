@@ -1,0 +1,13 @@
+MODULE IfElse;
+IMPORT Out;
+VAR x: INTEGER;
+BEGIN
+    x := 5;
+    IF x > 10 THEN
+        Out.Int(1, 0)
+    ELSIF x > 3 THEN
+        Out.Int(2, 0)
+    ELSE
+        Out.Int(3, 0)
+    END
+END IfElse.

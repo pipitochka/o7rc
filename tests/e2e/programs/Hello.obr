@@ -1,0 +1,5 @@
+MODULE Hello;
+IMPORT Out;
+BEGIN
+    Out.Int(42, 0)
+END Hello.

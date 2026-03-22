@@ -1,0 +1,19 @@
+MODULE Factorial;
+IMPORT Out;
+VAR result: INTEGER;
+
+PROCEDURE Fact(n: INTEGER): INTEGER;
+VAR res: INTEGER;
+BEGIN
+    IF n <= 1 THEN
+        res := 1
+    ELSE
+        res := n * Fact(n - 1)
+    END
+RETURN res
+END Fact;
+
+BEGIN
+    result := Fact(10);
+    Out.Int(result, 0)
+END Factorial.

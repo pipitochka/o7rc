@@ -1,0 +1,7 @@
+MODULE Negate;
+IMPORT Out;
+VAR x: INTEGER;
+BEGIN
+    x := -42;
+    Out.Int(x, 0)
+END Negate.

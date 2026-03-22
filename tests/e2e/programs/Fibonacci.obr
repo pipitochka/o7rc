@@ -1,0 +1,26 @@
+MODULE Fibonacci;
+IMPORT Out;
+VAR result: INTEGER;
+
+PROCEDURE Fib(n: INTEGER): INTEGER;
+VAR a, b, i, tmp, res: INTEGER;
+BEGIN
+    IF n <= 1 THEN
+        res := n
+    ELSE
+        a := 0;
+        b := 1;
+        FOR i := 2 TO n DO
+            tmp := b;
+            b := a + b;
+            a := tmp
+        END;
+        res := b
+    END
+RETURN res
+END Fib;
+
+BEGIN
+    result := Fib(10);
+    Out.Int(result, 0)
+END Fibonacci.

@@ -1,89 +1,161 @@
 # o7rc
 
-**o7rc** — кросс-компилятор языка Oberon-7 в машинно-ориентированный ассемблер архитектуры RISC-V.
+**o7rc** — кросс-компилятор языка Oberon-7 в ассемблер RISC-V (RV32IM), совместимый с симулятором [RARS](https://github.com/TheThirdOne/rars).
 
 ## Оглавление
 - [Функционал](#функционал)
-- [Начало работы](#начало-работы)
-    - [Быстрый старт](#быстрый-старт)
-    - [Полное руководство](#полное-руководство)
-        - [1. Зависимости](#1-зависимости)
-        - [2. Сборка](#2-сборка)
-        - [3. Запуск](#3-запуск)
-        - [4. Тестирование](#4-тестирование)
-- [Синтаксис oberon7](#синтаксис-oberon7)
+- [Зависимости](#зависимости)
+- [Сборка](#сборка)
+- [Запуск](#запуск)
+- [Тестирование](#тестирование)
+- [Docker](#docker)
+- [Синтаксис Oberon-7](#синтаксис-oberon-7)
+
 ---
 
 ## Функционал
-TODO
+
+| Компонент | Описание |
+|---|---|
+| **Лексер** | Flex — токенизация исходного кода Oberon-7 |
+| **Парсер** | Bison — построение AST по грамматике Oberon-7 |
+| **Кодогенерация** | Генерация RISC-V ассемблера (RV32IM) из AST |
+| **E2E-тесты** | Сравнение вывода o7rc+RARS с эталонным компилятором OBNC |
+
 ---
 
-## Начало работы
-### Быстрый-старт
-```shell
-docker build -t o7rc .
-docker run -it --rm -v "$(pwd)":/work o7rc
-mkdir build && cd build
-cmake .. && make
-./o7rc
-```
+## Зависимости
 
-### Полное руководство
-#### 1. Зависимости
+### Обязательные
 
-(macOS)
+| Пакет | Версия | Назначение |
+|---|---|---|
+| C++ компилятор | C++17 | GCC >= 9 или Clang >= 10 |
+| CMake | >= 3.20 | Система сборки |
+| Flex | любая | Генерация лексера |
+| Bison | >= 3.0 | Генерация парсера |
+
+### Для E2E-тестов (опционально)
+
+| Пакет | Версия | Назначение |
+|---|---|---|
+| Java (JRE) | >= 8 | Запуск RARS |
+| libgc-dev / bdw-gc | любая | Зависимость OBNC (Boehm GC) |
+
+RARS и OBNC скачиваются и собираются автоматически при сборке с `-DUSE_RARS=ON`.
+
+### Установка
+
+**macOS:**
 ```bash
 xcode-select --install
 brew install bison flex cmake
+# Для e2e-тестов:
+brew install openjdk bdw-gc
 ```
 
-(Linux)
-```shell
-apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    cmake \
-    ninja-build \
-    flex \
-    bison \
-    pkg-config \
-    gdb \
-    procps 
-```
-
-(Docker)
-```shell
-docker build -t o7rc .
-```
-
-#### 2. Сборка
-
-(Локально)
-```shell
-mkdir build && cd build
-cmake .. && make    
-```
-
-(Docker)
-```shell
-docker run -it --rm -v "$(pwd)":/work o7rc
-mkdir build && cd build
-cmake .. && make
-```
-
-#### 3. Запуск
-
-```shell
-./o7rc
-```
-
-#### 4. Тестирование
-
-```shell
-./o7rc_tests
+**Ubuntu / Debian:**
+```bash
+sudo apt-get update && sudo apt-get install -y \
+    build-essential cmake flex bison libfl-dev
+# Для e2e-тестов:
+sudo apt-get install -y default-jre-headless libgc-dev
 ```
 
 ---
-## Синтаксис oberon7
+
+## Сборка
+
+```bash
+mkdir build && cd build
+cmake ..
+cmake --build . --parallel
+```
+
+### Опции CMake
+
+| Опция | По умолчанию | Описание |
+|---|---|---|
+| `USE_FLEX` | `ON` | Использовать Flex-лексер |
+| `USE_BISON` | `ON` | Использовать Bison-парсер |
+| `USE_CODEGEN` | `ON` | Включить кодогенерацию RISC-V |
+| `USE_RARS` | `OFF` | Скачать RARS и включить e2e-тесты |
+| `USE_DEBUG` | `OFF` | Дополнительный отладочный вывод |
+
+Пример сборки со всеми тестами:
+
+```bash
+cmake .. -DUSE_RARS=ON
+cmake --build . --parallel
+```
+
+---
+
+## Запуск
+
+```bash
+# Компиляция .obr → .asm
+./o7rc input.obr -o output.asm
+
+# Запуск в RARS
+java -jar rars.jar nc sm output.asm
+```
+
+---
+
+## Тестирование
+
+### Юнит-тесты (Google Test)
+
+```bash
+cd build
+ctest -E e2e --output-on-failure
+# или напрямую:
+./o7rc_tests
+```
+
+### E2E-тесты (OBNC vs o7rc+RARS)
+
+Требуется Java, libgc-dev и сборка с `-DUSE_RARS=ON`:
+
+```bash
+cd build
+ctest -L e2e --output-on-failure
+```
+
+Каждый e2e-тест:
+1. Компилирует `.obr` через OBNC → запускает нативный бинарник → эталонный вывод
+2. Компилирует `.obr` → `.asm` через `o7rc` → запускает в RARS → фактический вывод
+3. Сравнивает вывод OBNC и o7rc+RARS
+
+Тестовые программы находятся в `tests/e2e/programs/`.
+
+### Все тесты сразу
+
+```bash
+ctest --test-dir build --output-on-failure
+```
+
+---
+
+## Docker
+
+```bash
+# Сборка образа
+docker build -t o7rc .
+
+# Запуск контейнера
+docker run -it --rm -v "$(pwd)":/work o7rc
+
+# Внутри контейнера:
+mkdir build && cd build
+cmake .. -DUSE_RARS=ON && cmake --build . --parallel
+ctest --output-on-failure
+```
+
+---
+
+## Синтаксис Oberon-7
 
 ```ebnf
 letter     = "A" | "B" | … | "Z" | "a" | "b" | … | "z".
@@ -174,3 +246,4 @@ module             = MODULE ident ";" [ImportList] DeclarationSequence
                      [BEGIN StatementSequence] END ident "." .
 ImportList         = IMPORT import {"," import} ";".
 import             = ident [":=" ident].
+```

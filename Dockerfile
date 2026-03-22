@@ -16,6 +16,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     procps \
     ca-certificates \
     libfl-dev \
+    default-jre-headless \
+    libgc-dev \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /work

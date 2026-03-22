@@ -1,0 +1,10 @@
+MODULE ForLoop;
+IMPORT Out;
+VAR i, sum: INTEGER;
+BEGIN
+    sum := 0;
+    FOR i := 1 TO 5 DO
+        sum := sum + i * i
+    END;
+    Out.Int(sum, 0)
+END ForLoop.

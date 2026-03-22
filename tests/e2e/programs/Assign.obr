@@ -1,0 +1,9 @@
+MODULE Assign;
+IMPORT Out;
+VAR x: INTEGER;
+BEGIN
+    x := 10;
+    x := x + 5;
+    x := x * 2;
+    Out.Int(x, 0)
+END Assign.

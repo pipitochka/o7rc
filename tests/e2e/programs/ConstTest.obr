@@ -1,0 +1,8 @@
+MODULE ConstTest;
+IMPORT Out;
+CONST Max = 100;
+VAR x: INTEGER;
+BEGIN
+    x := Max + 23;
+    Out.Int(x, 0)
+END ConstTest.

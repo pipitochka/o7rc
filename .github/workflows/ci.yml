@@ -5,15 +5,14 @@ on:
     branches: [ "develop", "main" ]
   pull_request:
     branches: [ "develop", "main" ]
-    
+
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-      
-      # Устанавливаем необходимые пакеты
+
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -25,22 +24,19 @@ jobs:
             bison \
             git \
             pkg-config \
-            gdb \
-            procps \
             ca-certificates \
-            libfl-dev
+            libfl-dev \
+            default-jre-headless \
+            libgc-dev
 
       - name: Configure CMake
-        run: cmake -B build -S .
+        run: cmake -B build -S . -DUSE_RARS=ON
 
       - name: Build
         run: cmake --build build --parallel
-      
-      - name: Run Tests
-        run: ctest --test-dir build --output-on-failure
 
+      - name: Unit tests
+        run: ctest --test-dir build -E e2e --output-on-failure
 
-#      - name: Style
-#        run: |
-#          find src tests -type f \( -name "*.cpp" -o -name "*.h" \) \
-#          -exec clang-format --style=file --dry-run --Werror {} +
+      - name: E2E tests (o7rc+RARS vs OBNC)
+        run: ctest --test-dir build -L e2e --output-on-failure

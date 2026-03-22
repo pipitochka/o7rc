@@ -19,19 +19,44 @@
 #include <tokenizer/impl/debug/BufferedTokenizer.h>
 #endif
 
-int main() {
+#ifdef USE_CODEGEN
+#include <codegen/RiscVCodeGen.h>
+#endif
+
+int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
 
-    std::cout << "Enter path to source file: ";
-    std::string path;
-    if (!std::getline(std::cin, path) || path.empty()) {
-        std::cerr << "No path provided\n";
-        return 1;
+    std::string inputPath;
+    std::string outputPath;
+
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "-o" && i + 1 < argc) {
+            outputPath = argv[++i];
+        } else if (inputPath.empty()) {
+            inputPath = arg;
+        }
     }
 
-    auto file = std::make_unique<std::ifstream>(path);
+    if (inputPath.empty()) {
+        std::cout << "Enter path to source file: ";
+        if (!std::getline(std::cin, inputPath) || inputPath.empty()) {
+            std::cerr << "No path provided\n";
+            return 1;
+        }
+    }
+
+    if (outputPath.empty()) {
+        std::cout << "Enter path to output file: ";
+        if (!std::getline(std::cin, outputPath) || outputPath.empty()) {
+            std::cerr << "No path provided\n";
+            return 1;
+        }
+    }
+
+    auto file = std::make_unique<std::ifstream>(inputPath);
     if (!*file) {
-        std::cerr << "Cannot open file: " << path << "\n";
+        std::cerr << "Cannot open file: " << inputPath << "\n";
         return 1;
     }
 
@@ -54,7 +79,6 @@ int main() {
     buffered->print();
 
     tokenizer = std::move(buffered);
-
 #endif
 
     std::unique_ptr<IParser> parser;
@@ -74,6 +98,35 @@ int main() {
     }
 
     auto result = parser->parse(tokenizer);
+
+    if (!result) {
+        std::cerr << "Parsing failed\n";
+        return 1;
+    }
+
+    std::cout << "Parsed module: " << result->name << "\n";
+
+#ifdef USE_CODEGEN
+    if (outputPath.empty()) {
+        outputPath = inputPath;
+        auto dotPos = outputPath.rfind('.');
+        if (dotPos != std::string::npos)
+            outputPath = outputPath.substr(0, dotPos);
+        outputPath += ".asm";
+    }
+
+    std::ofstream outFile(outputPath);
+    if (!outFile) {
+        std::cerr << "Cannot open output file: " << outputPath << "\n";
+        return 1;
+    }
+
+    RiscVCodeGen codegen;
+    codegen.generate(*result, outFile);
+    outFile.close();
+
+    std::cout << "Generated: " << outputPath << "\n";
+#endif
 
     return 0;
 }

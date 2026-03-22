@@ -1,0 +1,9 @@
+MODULE Arith;
+IMPORT Out;
+VAR a, b, c: INTEGER;
+BEGIN
+    a := 7;
+    b := 3;
+    c := a * b + a DIV b - a MOD b;
+    Out.Int(c, 0)
+END Arith.

@@ -1,0 +1,10 @@
+MODULE RepeatTest;
+IMPORT Out;
+VAR n: INTEGER;
+BEGIN
+    n := 1;
+    REPEAT
+        n := n * 2
+    UNTIL n >= 100;
+    Out.Int(n, 0)
+END RepeatTest.
