@@ -1,4 +1,4 @@
-name: C/C++ CI
+name: CI All Frontend Configs
 
 on:
   push:
@@ -9,6 +9,21 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - name: "Flex+HandParser"
+            flags: "-DUSE_FLEX=ON -DUSE_BISON=OFF -DUSE_HAND_TOKENIZER=OFF -DUSE_HAND_PARSER=ON"
+          - name: "HandTokenizer+Bison"
+            flags: "-DUSE_FLEX=OFF -DUSE_BISON=ON -DUSE_HAND_TOKENIZER=ON -DUSE_HAND_PARSER=OFF"
+          - name: "HandTokenizer+HandParser"
+            flags: "-DUSE_FLEX=OFF -DUSE_BISON=OFF -DUSE_HAND_TOKENIZER=ON -DUSE_HAND_PARSER=ON"
+          - name: "All"
+            flags: "-DUSE_FLEX=ON -DUSE_BISON=ON -DUSE_HAND_TOKENIZER=ON -DUSE_HAND_PARSER=ON"
+
+    name: ${{ matrix.config.name }}
 
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +45,7 @@ jobs:
             libgc-dev
 
       - name: Configure CMake
-        run: cmake -B build -S . -DUSE_RARS=ON
+        run: cmake -B build -S . ${{ matrix.config.flags }} -DUSE_RARS=ON
 
       - name: Build
         run: cmake --build build --parallel
