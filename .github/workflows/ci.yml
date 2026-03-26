@@ -42,7 +42,8 @@ jobs:
             ca-certificates \
             libfl-dev \
             default-jre-headless \
-            libgc-dev
+            libgc-dev \
+            libsdl1.2-dev
 
       - name: Configure CMake
         run: cmake -B build -S . ${{ matrix.config.flags }} -DUSE_RARS=ON
