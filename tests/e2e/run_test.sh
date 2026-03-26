@@ -18,6 +18,8 @@ JAVA="$2"
 RARS_JAR="$3"
 OBNC="$4"
 SOURCE="$5"
+shift 5
+EXTRA_ARGS=("$@")
 
 TEST_NAME=$(basename "${SOURCE}" .obr)
 TMPDIR=$(mktemp -d)
@@ -53,7 +55,7 @@ EXPECTED=$("${OBNC_DIR}/${MODULE_NAME}" 2>/dev/null) || {
     exit 4
 }
 
-if ! "${O7RC}" "${SOURCE}" -o "${ASM}" 2>"${TMPDIR}/compile.err"; then
+if ! "${O7RC}" "${SOURCE}" -o "${ASM}" "${EXTRA_ARGS[@]}" 2>"${TMPDIR}/compile.err"; then
     echo "FAIL [${TEST_NAME}]: o7rc compilation error"
     cat "${TMPDIR}/compile.err"
     exit 1

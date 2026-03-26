@@ -11,11 +11,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(SRC_DIR ${CMAKE_SOURCE_DIR}/src)
 set(TESTS_DIR ${CMAKE_SOURCE_DIR}/tests)
 
-option(USE_FLEX    "Build Flex tokenizer"         ON)
-option(USE_BISON   "Build Bison parser"           ON)
-option(USE_DEBUG   "More info"                    OFF)
-option(USE_CODEGEN "Build RISC-V code generator"  ON)
-option(USE_RARS    "Use RARS to tests"            ON)
+option(USE_FLEX           "Build Flex tokenizer"              ON)
+option(USE_BISON          "Build Bison parser"                ON)
+option(USE_HAND_TOKENIZER "Build hand-written tokenizer"      OFF)
+option(USE_HAND_PARSER    "Build hand-written parser"         OFF)
+option(USE_DEBUG          "More info"                         OFF)
+option(USE_CODEGEN        "Build RISC-V code generator"       ON)
+option(USE_RARS           "Use RARS to tests"                 ON)
 
 
 include(FetchContent)
@@ -44,6 +46,7 @@ target_include_directories(core PRIVATE
 
 target_include_directories(o7rc_tests PRIVATE
         ${SRC_DIR}
+        ${TESTS_DIR}
         ${CMAKE_BINARY_DIR}
 )
 
@@ -76,15 +79,24 @@ if(USE_FLEX)
             ${SRC_DIR}/tokenizer/impl/flex/FlexTokenizer.cpp 
             ${FLEX_O7Lexer_OUTPUTS}
     )
-    target_sources(o7rc_tests PRIVATE
-            ${TESTS_DIR}/tokenizer/flex/test_flex_tokenizer_logic.cpp
-            ${TESTS_DIR}/tokenizer/flex/test_flex_tokenizer_grammar.cpp
-            ${TESTS_DIR}/tokenizer/flex/test_flex_tokenizer_snippets.cpp
-    )
     target_compile_definitions(core PUBLIC USE_FLEX=1)
-else()
+elseif(NOT USE_HAND_TOKENIZER)
     message(FATAL_ERROR "No tokenizer selected!")    
 endif()
+
+if(USE_HAND_TOKENIZER)
+    message(STATUS "Use hand-written tokenizer")
+    target_sources(core PRIVATE
+            ${SRC_DIR}/tokenizer/impl/hand/HandTokenizer.cpp
+    )
+    target_compile_definitions(core PUBLIC USE_HAND_TOKENIZER=1)
+endif()
+
+target_sources(o7rc_tests PRIVATE
+        ${TESTS_DIR}/tokenizer/test_tokenizer_logic.cpp
+        ${TESTS_DIR}/tokenizer/test_tokenizer_grammar.cpp
+        ${TESTS_DIR}/tokenizer/test_tokenizer_snippets.cpp
+)
 
 if(USE_BISON)
     message("Use bison lexer")
@@ -100,16 +112,25 @@ if(USE_BISON)
             ${BISON_O7Parser_OUTPUTS}
     )
     target_compile_definitions(core PUBLIC USE_BISON=1)
-    target_sources(o7rc_tests PRIVATE
-            ${TESTS_DIR}/parser/bison/test_bison_parser_structure.cpp
-            ${TESTS_DIR}/parser/bison/test_bison_parser_snippets.cpp
-            ${TESTS_DIR}/parser/bison/test_bison_parser_ast_expr.cpp
-            ${TESTS_DIR}/parser/bison/test_bison_parser_ast_stmt.cpp
-            ${TESTS_DIR}/parser/bison/test_bison_parser_ast_types.cpp
-    )
-else()
-    message(FATAL_ERROR "No lexer selected!")
+elseif(NOT USE_HAND_PARSER)
+    message(FATAL_ERROR "No parser selected!")
 endif()
+
+if(USE_HAND_PARSER)
+    message(STATUS "Use hand-written parser")
+    target_sources(core PRIVATE
+            ${SRC_DIR}/parser/impl/hand/HandParser.cpp
+    )
+    target_compile_definitions(core PUBLIC USE_HAND_PARSER=1)
+endif()
+
+target_sources(o7rc_tests PRIVATE
+        ${TESTS_DIR}/parser/test_parser_structure.cpp
+        ${TESTS_DIR}/parser/test_parser_snippets.cpp
+        ${TESTS_DIR}/parser/test_parser_ast_expr.cpp
+        ${TESTS_DIR}/parser/test_parser_ast_stmt.cpp
+        ${TESTS_DIR}/parser/test_parser_ast_types.cpp
+)
 
 if(USE_DEBUG)
     message("Use debug")
@@ -245,30 +266,49 @@ if(USE_RARS)
             set(E2E_DIR "${CMAKE_SOURCE_DIR}/tests/e2e")
             set(E2E_RUNNER "${E2E_DIR}/run_test.sh")
 
+            set(E2E_CONFIGS "")
+            if(USE_FLEX AND USE_BISON)
+                list(APPEND E2E_CONFIGS "flex_bison;--tokenizer;flex;--parser;bison")
+            endif()
+            if(USE_FLEX AND USE_HAND_PARSER)
+                list(APPEND E2E_CONFIGS "flex_hand;--tokenizer;flex;--parser;hand")
+            endif()
+            if(USE_HAND_TOKENIZER AND USE_BISON)
+                list(APPEND E2E_CONFIGS "hand_bison;--tokenizer;hand;--parser;bison")
+            endif()
+            if(USE_HAND_TOKENIZER AND USE_HAND_PARSER)
+                list(APPEND E2E_CONFIGS "hand_hand;--tokenizer;hand;--parser;hand")
+            endif()
+
             file(GLOB E2E_SOURCES "${E2E_DIR}/programs/*.obr")
-            foreach(SRC ${E2E_SOURCES})
-                get_filename_component(TEST_NAME ${SRC} NAME_WE)
-                add_test(
-                    NAME "e2e_${TEST_NAME}"
-                    COMMAND bash "${E2E_RUNNER}"
-                        "$<TARGET_FILE:o7rc>"
-                        "${Java_JAVA_EXECUTABLE}"
-                        "${RARS_JAR}"
-                        "${OBNC_BIN}"
-                        "${SRC}"
-                )
-                set(E2E_ENV "")
-                if(GC_LIB_DIR)
-                    list(APPEND E2E_ENV "LIBRARY_PATH=${GC_LIB_DIR}")
-                endif()
-                if(GC_INCLUDE_DIR)
-                    list(APPEND E2E_ENV "C_INCLUDE_PATH=${GC_INCLUDE_DIR}")
-                endif()
-                set_tests_properties("e2e_${TEST_NAME}" PROPERTIES
-                    TIMEOUT 60
-                    LABELS "e2e"
-                    ENVIRONMENT "${E2E_ENV}"
-                )
+            foreach(CFG ${E2E_CONFIGS})
+                list(GET CFG 0 CFG_NAME)
+                list(SUBLIST CFG 1 -1 CFG_ARGS)
+                foreach(SRC ${E2E_SOURCES})
+                    get_filename_component(TEST_NAME ${SRC} NAME_WE)
+                    add_test(
+                        NAME "e2e_${TEST_NAME}_${CFG_NAME}"
+                        COMMAND bash "${E2E_RUNNER}"
+                            "$<TARGET_FILE:o7rc>"
+                            "${Java_JAVA_EXECUTABLE}"
+                            "${RARS_JAR}"
+                            "${OBNC_BIN}"
+                            "${SRC}"
+                            ${CFG_ARGS}
+                    )
+                    set(E2E_ENV "")
+                    if(GC_LIB_DIR)
+                        list(APPEND E2E_ENV "LIBRARY_PATH=${GC_LIB_DIR}")
+                    endif()
+                    if(GC_INCLUDE_DIR)
+                        list(APPEND E2E_ENV "C_INCLUDE_PATH=${GC_INCLUDE_DIR}")
+                    endif()
+                    set_tests_properties("e2e_${TEST_NAME}_${CFG_NAME}" PROPERTIES
+                        TIMEOUT 60
+                        LABELS "e2e"
+                        ENVIRONMENT "${E2E_ENV}"
+                    )
+                endforeach()
             endforeach()
         endif()
     endif()

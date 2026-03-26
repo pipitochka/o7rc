@@ -11,8 +11,16 @@
 #include <tokenizer/impl/flex/FlexTokenizer.h>
 #endif
 
+#ifdef USE_HAND_TOKENIZER
+#include <tokenizer/impl/hand/HandTokenizer.h>
+#endif
+
 #ifdef USE_BISON
 #include <parser/impl/bison/BisonParser.h>
+#endif
+
+#ifdef USE_HAND_PARSER
+#include <parser/impl/hand/HandParser.h>
 #endif
 
 #ifdef USE_DEBUG
@@ -28,11 +36,17 @@ int main(int argc, char* argv[]) {
 
     std::string inputPath;
     std::string outputPath;
+    std::string tokenizerChoice;
+    std::string parserChoice;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "-o" && i + 1 < argc) {
             outputPath = argv[++i];
+        } else if (arg == "--tokenizer" && i + 1 < argc) {
+            tokenizerChoice = argv[++i];
+        } else if (arg == "--parser" && i + 1 < argc) {
+            parserChoice = argv[++i];
         } else if (inputPath.empty()) {
             inputPath = arg;
         }
@@ -62,8 +76,15 @@ int main(int argc, char* argv[]) {
 
     ITokenizerPtr tokenizer;
 
-#ifdef USE_FLEX
+#if defined(USE_FLEX) && defined(USE_HAND_TOKENIZER)
+    if (tokenizerChoice == "hand")
+        tokenizer = std::make_unique<HandTokenizer>(*file);
+    else
+        tokenizer = std::make_unique<FlexTokenizer>(*file);
+#elif defined(USE_FLEX)
     tokenizer = std::make_unique<FlexTokenizer>(*file);
+#elif defined(USE_HAND_TOKENIZER)
+    tokenizer = std::make_unique<HandTokenizer>(*file);
 #endif
 
 #ifdef USE_DEBUG
@@ -83,8 +104,15 @@ int main(int argc, char* argv[]) {
 
     std::unique_ptr<IParser> parser;
 
-#ifdef USE_BISON
+#if defined(USE_BISON) && defined(USE_HAND_PARSER)
+    if (parserChoice == "hand")
+        parser = std::make_unique<HandParser>();
+    else
+        parser = std::make_unique<BisonParser>();
+#elif defined(USE_BISON)
     parser = std::make_unique<BisonParser>();
+#elif defined(USE_HAND_PARSER)
+    parser = std::make_unique<HandParser>();
 #endif
 
     if (!tokenizer) {
