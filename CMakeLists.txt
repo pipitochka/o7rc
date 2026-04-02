@@ -132,6 +132,7 @@ target_sources(o7rc_tests PRIVATE
         ${TESTS_DIR}/parser/test_parser_ast_types.cpp
         ${TESTS_DIR}/ir/test_ir_builder.cpp
         ${TESTS_DIR}/ir/test_ir_passes.cpp
+        ${TESTS_DIR}/sema/test_sema.cpp
 )
 
 if(USE_DEBUG)
