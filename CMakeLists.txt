@@ -154,6 +154,7 @@ if(USE_CODEGEN)
 endif()
 
 target_sources(core PRIVATE
+        ${SRC_DIR}/sema/Sema.cpp
         ${SRC_DIR}/ir/IRBuilder.cpp
         ${SRC_DIR}/ir/IRPrinter.cpp
         ${SRC_DIR}/ir/IRDotExporter.cpp
