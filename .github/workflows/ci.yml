@@ -14,6 +14,8 @@ jobs:
       fail-fast: false
       matrix:
         config:
+          - name: "Flex+Bison"
+            flags: "-DUSE_FLEX=ON -DUSE_BISON=ON -DUSE_HAND_TOKENIZER=OFF -DUSE_HAND_PARSER=OFF"
           - name: "Flex+HandParser"
             flags: "-DUSE_FLEX=ON -DUSE_BISON=OFF -DUSE_HAND_TOKENIZER=OFF -DUSE_HAND_PARSER=ON"
           - name: "HandTokenizer+Bison"
@@ -51,8 +53,8 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
 
-      - name: Unit tests
+      - name: Unit tests (tokenizer, parser, IR)
         run: ctest --test-dir build -E e2e --output-on-failure
 
-      - name: E2E tests (o7rc+RARS vs OBNC)
+      - name: E2E tests (AST codegen + IR codegen, all frontend combos)
         run: ctest --test-dir build -L e2e --output-on-failure

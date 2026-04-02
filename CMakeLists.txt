@@ -130,6 +130,8 @@ target_sources(o7rc_tests PRIVATE
         ${TESTS_DIR}/parser/test_parser_ast_expr.cpp
         ${TESTS_DIR}/parser/test_parser_ast_stmt.cpp
         ${TESTS_DIR}/parser/test_parser_ast_types.cpp
+        ${TESTS_DIR}/ir/test_ir_builder.cpp
+        ${TESTS_DIR}/ir/test_ir_passes.cpp
 )
 
 if(USE_DEBUG)
@@ -281,18 +283,26 @@ if(USE_RARS)
             if(USE_FLEX AND USE_BISON)
                 list(APPEND E2E_CONFIG_NAMES "flex_bison")
                 set(ARGS_flex_bison "--tokenizer" "flex" "--parser" "bison")
+                list(APPEND E2E_CONFIG_NAMES "flex_bison_ir")
+                set(ARGS_flex_bison_ir "--tokenizer" "flex" "--parser" "bison" "--ir")
             endif()
             if(USE_FLEX AND USE_HAND_PARSER)
                 list(APPEND E2E_CONFIG_NAMES "flex_hand")
                 set(ARGS_flex_hand "--tokenizer" "flex" "--parser" "hand")
+                list(APPEND E2E_CONFIG_NAMES "flex_hand_ir")
+                set(ARGS_flex_hand_ir "--tokenizer" "flex" "--parser" "hand" "--ir")
             endif()
             if(USE_HAND_TOKENIZER AND USE_BISON)
                 list(APPEND E2E_CONFIG_NAMES "hand_bison")
                 set(ARGS_hand_bison "--tokenizer" "hand" "--parser" "bison")
+                list(APPEND E2E_CONFIG_NAMES "hand_bison_ir")
+                set(ARGS_hand_bison_ir "--tokenizer" "hand" "--parser" "bison" "--ir")
             endif()
             if(USE_HAND_TOKENIZER AND USE_HAND_PARSER)
                 list(APPEND E2E_CONFIG_NAMES "hand_hand")
                 set(ARGS_hand_hand "--tokenizer" "hand" "--parser" "hand")
+                list(APPEND E2E_CONFIG_NAMES "hand_hand_ir")
+                set(ARGS_hand_hand_ir "--tokenizer" "hand" "--parser" "hand" "--ir")
             endif()
 
             file(GLOB E2E_SOURCES "${E2E_DIR}/programs/*.obr")
