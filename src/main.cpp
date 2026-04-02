@@ -31,6 +31,15 @@
 #include <codegen/RiscVCodeGen.h>
 #endif
 
+#include <ir/IRBuilder.h>
+#include <ir/IRPrinter.h>
+#include <ir/IRDotExporter.h>
+#include <ir/PassManager.h>
+#include <ir/RiscVIRCodeGen.h>
+#include <ir/passes/ConstantFolding.h>
+#include <ir/passes/CopyPropagation.h>
+#include <ir/passes/DeadCodeElim.h>
+
 int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
 
@@ -38,6 +47,11 @@ int main(int argc, char* argv[]) {
     std::string outputPath;
     std::string tokenizerChoice;
     std::string parserChoice;
+    bool useIR = false;
+    bool dumpIR = false;
+    bool dumpIRPasses = false;
+    bool optimize = false;
+    std::string dotPath;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -47,6 +61,21 @@ int main(int argc, char* argv[]) {
             tokenizerChoice = argv[++i];
         } else if (arg == "--parser" && i + 1 < argc) {
             parserChoice = argv[++i];
+        } else if (arg == "--ir") {
+            useIR = true;
+        } else if (arg == "--dump-ir") {
+            useIR = true;
+            dumpIR = true;
+        } else if (arg == "--dump-ir-passes") {
+            useIR = true;
+            dumpIRPasses = true;
+            optimize = true;
+        } else if (arg == "--opt") {
+            useIR = true;
+            optimize = true;
+        } else if (arg == "--dump-dot" && i + 1 < argc) {
+            useIR = true;
+            dotPath = argv[++i];
         } else if (inputPath.empty()) {
             inputPath = arg;
         }
@@ -134,7 +163,6 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Parsed module: " << result->name << "\n";
 
-#ifdef USE_CODEGEN
     if (outputPath.empty()) {
         outputPath = inputPath;
         auto dotPos = outputPath.rfind('.');
@@ -143,17 +171,68 @@ int main(int argc, char* argv[]) {
         outputPath += ".asm";
     }
 
-    std::ofstream outFile(outputPath);
-    if (!outFile) {
-        std::cerr << "Cannot open output file: " << outputPath << "\n";
-        return 1;
+    if (useIR) {
+        IRBuilder irBuilder;
+        auto irMod = irBuilder.build(*result);
+
+        if (dumpIR) {
+            IRPrinter printer;
+            std::cerr << "\n";
+            printer.print(irMod, std::cerr);
+            std::cerr << "\n";
+        }
+
+        if (optimize) {
+            PassManager pm;
+            pm.add<ConstantFolding>()
+              .add<CopyPropagation>()
+              .add<DeadCodeElim>();
+
+            std::ostream* log = dumpIRPasses ? &std::cerr : nullptr;
+            pm.run(irMod, log);
+
+            if (dumpIR) {
+                std::cerr << "; === After optimization ===\n\n";
+                IRPrinter printer;
+                printer.print(irMod, std::cerr);
+                std::cerr << "\n";
+            }
+        }
+
+        if (!dotPath.empty()) {
+            std::ofstream dotFile(dotPath);
+            if (dotFile) {
+                IRDotExporter exporter;
+                exporter.exportModule(irMod, dotFile);
+                dotFile.close();
+                std::cout << "CFG exported: " << dotPath << "\n";
+            }
+        }
+
+        std::ofstream outFile(outputPath);
+        if (!outFile) {
+            std::cerr << "Cannot open output file: " << outputPath << "\n";
+            return 1;
+        }
+
+        RiscVIRCodeGen irCodegen;
+        irCodegen.generate(irMod, outFile);
+        outFile.close();
+        std::cout << "Generated (IR): " << outputPath << "\n";
     }
+#ifdef USE_CODEGEN
+    else {
+        std::ofstream outFile(outputPath);
+        if (!outFile) {
+            std::cerr << "Cannot open output file: " << outputPath << "\n";
+            return 1;
+        }
 
-    RiscVCodeGen codegen;
-    codegen.generate(*result, outFile);
-    outFile.close();
-
-    std::cout << "Generated: " << outputPath << "\n";
+        RiscVCodeGen codegen;
+        codegen.generate(*result, outFile);
+        outFile.close();
+        std::cout << "Generated: " << outputPath << "\n";
+    }
 #endif
 
     return 0;

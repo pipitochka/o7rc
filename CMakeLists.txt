@@ -151,6 +151,17 @@ if(USE_CODEGEN)
     target_compile_definitions(core PUBLIC USE_CODEGEN=1)
 endif()
 
+target_sources(core PRIVATE
+        ${SRC_DIR}/ir/IRBuilder.cpp
+        ${SRC_DIR}/ir/IRPrinter.cpp
+        ${SRC_DIR}/ir/IRDotExporter.cpp
+        ${SRC_DIR}/ir/PassManager.cpp
+        ${SRC_DIR}/ir/RiscVIRCodeGen.cpp
+        ${SRC_DIR}/ir/passes/ConstantFolding.cpp
+        ${SRC_DIR}/ir/passes/CopyPropagation.cpp
+        ${SRC_DIR}/ir/passes/DeadCodeElim.cpp
+)
+
 add_executable(o7rc
         ${SRC_DIR}/main.cpp
 )
@@ -266,7 +277,7 @@ if(USE_RARS)
             set(E2E_DIR "${CMAKE_SOURCE_DIR}/tests/e2e")
             set(E2E_RUNNER "${E2E_DIR}/run_test.sh")
 
-            set(E2E_CONFIGS "")
+            set(E2E_CONFIG_NAMES "")
             if(USE_FLEX AND USE_BISON)
                 list(APPEND E2E_CONFIG_NAMES "flex_bison")
                 set(ARGS_flex_bison "--tokenizer" "flex" "--parser" "bison")
@@ -285,9 +296,7 @@ if(USE_RARS)
             endif()
 
             file(GLOB E2E_SOURCES "${E2E_DIR}/programs/*.obr")
-            foreach(CFG ${E2E_CONFIGS})
-                list(GET CFG 0 CFG_NAME)
-                list(SUBLIST CFG 1 -1 CFG_ARGS)
+            foreach(CFG_NAME ${E2E_CONFIG_NAMES})
                 foreach(SRC ${E2E_SOURCES})
                     get_filename_component(TEST_NAME ${SRC} NAME_WE)
                     add_test(
@@ -298,7 +307,7 @@ if(USE_RARS)
                             "${RARS_JAR}"
                             "${OBNC_BIN}"
                             "${SRC}"
-                            ${CFG_ARGS}
+                            ${ARGS_${CFG_NAME}}
                     )
                     set(E2E_ENV "")
                     if(GC_LIB_DIR)
