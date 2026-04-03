@@ -15,7 +15,10 @@ TypeInfo* RiscVCodeGen::resolveType(TypeNode* t) {
     if (!t) return types_.integerType();
     if (auto* named = dynamic_cast<NamedType*>(t)) {
         auto* bi = types_.resolveBuiltin(named->name);
-        return bi ? bi : types_.integerType();
+        if (bi) return bi;
+        auto it = namedTypes_.find(named->name);
+        if (it != namedTypes_.end()) return it->second;
+        return types_.integerType();
     }
     if (auto* arr = dynamic_cast<ArrayType*>(t)) {
         int length = 1;
@@ -28,9 +31,15 @@ TypeInfo* RiscVCodeGen::resolveType(TypeNode* t) {
     if (auto* ptr = dynamic_cast<PointerType*>(t)) {
         return types_.makePointer(resolveType(ptr->baseType.get()));
     }
-    if (dynamic_cast<RecordType*>(t)) {
-        // TODO: полная поддержка RECORD
-        return types_.integerType();
+    if (auto* rec = dynamic_cast<RecordType*>(t)) {
+        std::vector<std::pair<std::string, TypeInfo*>> fields;
+        for (auto& fd : rec->fields) {
+            TypeInfo* fti = resolveType(fd->type.get());
+            for (auto& fname : fd->names)
+                fields.push_back({fname, fti});
+        }
+        TypeInfo* base = rec->baseType ? resolveType(rec->baseType.get()) : nullptr;
+        return types_.makeRecord(fields, base);
     }
     return types_.integerType();
 }
@@ -83,8 +92,9 @@ void RiscVCodeGen::visit(ConstDecl& d) {
     sym_.define(s);
 }
 
-void RiscVCodeGen::visit(TypeDecl&) {
-    // TODO: регистрация пользовательских типов
+void RiscVCodeGen::visit(TypeDecl& d) {
+    TypeInfo* ti = resolveType(d.type.get());
+    namedTypes_[d.name] = ti;
 }
 
 void RiscVCodeGen::visit(VarDecl& d) {
@@ -101,7 +111,7 @@ void RiscVCodeGen::visit(VarDecl& d) {
             s.globalLabel = globalVarLabel(name);
             sym_.define(s);
 
-            if (ti->kind == TypeInfo::TArray) {
+            if (ti->kind == TypeInfo::TArray || ti->kind == TypeInfo::TRecord) {
                 emit_.data(s.globalLabel + ": .space " + std::to_string(ti->size));
             } else {
                 emit_.data(s.globalLabel + ": .word 0");
@@ -423,7 +433,6 @@ void RiscVCodeGen::visit(SetExpr& e) {
 // ============================================================
 
 void RiscVCodeGen::emitAddress(DesignatorExpr& des) {
-    // Базовое имя — может быть «module.name» (qualident)
     std::string baseName = des.baseName;
     std::string::size_type dotPos = baseName.find('.');
     std::string lookupName = (dotPos != std::string::npos)
@@ -432,6 +441,13 @@ void RiscVCodeGen::emitAddress(DesignatorExpr& des) {
     auto* sym = sym_.lookup(lookupName);
     if (!sym) sym = sym_.lookup(baseName);
 
+    std::string implicitField;
+    if (!sym && dotPos != std::string::npos) {
+        std::string firstPart = baseName.substr(0, dotPos);
+        sym = sym_.lookup(firstPart);
+        if (sym) implicitField = baseName.substr(dotPos + 1);
+    }
+
     if (!sym) {
         emit_.comment("ERROR: unknown symbol " + baseName);
         emit_.text("li a0, 0");
@@ -439,7 +455,6 @@ void RiscVCodeGen::emitAddress(DesignatorExpr& des) {
     }
 
     if (sym->kind == Symbol::Const) {
-        // Константа не имеет адреса — это ошибка, но для robustness
         emit_.text("li a0, " + std::to_string(sym->constValue));
         return;
     }
@@ -447,26 +462,55 @@ void RiscVCodeGen::emitAddress(DesignatorExpr& des) {
     if (sym->isGlobal) {
         emit_.text("la a0, " + sym->globalLabel);
     } else if (sym->isVarParam) {
-        // VAR-параметр: на стеке хранится адрес, а не значение
         emit_.text("lw a0, " + std::to_string(sym->stackOffset) + "(s0)");
     } else {
         emit_.text("addi a0, s0, " + std::to_string(sym->stackOffset));
     }
 
-    // Обрабатываем селекторы (кроме ArgsSelector — это вызов)
+    TypeInfo* curType = sym->type;
+
+    if (!implicitField.empty()) {
+        if (curType && curType->kind == TypeInfo::TPointer) {
+            emit_.text("lw a0, 0(a0)");
+            curType = curType->pointeeType;
+        }
+        if (curType && curType->kind == TypeInfo::TRecord) {
+            auto* f = curType->findField(implicitField);
+            if (f) {
+                if (f->offset != 0)
+                    emit_.text("addi a0, a0, " + std::to_string(f->offset));
+                curType = f->type;
+            }
+        }
+    }
+
     for (auto& sel : des.selectors) {
         if (dynamic_cast<ArgsSelector*>(sel.get())) break;
-        // a0 = текущий базовый адрес
+
         if (auto* field = dynamic_cast<FieldSelector*>(sel.get())) {
-            // TODO: найти смещение поля через TypeInfo
-            emit_.comment("field selector ." + field->name);
+            if (curType && curType->kind == TypeInfo::TPointer) {
+                emit_.text("lw a0, 0(a0)");
+                curType = curType->pointeeType;
+            }
+            if (curType && curType->kind == TypeInfo::TRecord) {
+                auto* f = curType->findField(field->name);
+                if (f) {
+                    if (f->offset != 0)
+                        emit_.text("addi a0, a0, " + std::to_string(f->offset));
+                    curType = f->type;
+                }
+            }
         } else if (auto* idx = dynamic_cast<IndexSelector*>(sel.get())) {
-            emit_.text("mv t3, a0"); // t3 = base addr
-            idx->index[0]->accept(*this); // a0 = index
-            emit_.text("slli a0, a0, 2"); // *4 (word size)
+            emit_.text("mv t3, a0");
+            idx->index[0]->accept(*this);
+            emit_.text("slli a0, a0, 2");
             emit_.text("add a0, t3, a0");
+            if (curType && curType->kind == TypeInfo::TArray)
+                curType = curType->elemType;
         } else if (dynamic_cast<DerefSelector*>(sel.get())) {
-            emit_.text("lw a0, 0(a0)"); // разыменование указателя
+            emit_.text("lw a0, 0(a0)");
+            if (curType && curType->kind == TypeInfo::TPointer)
+                curType = curType->pointeeType;
         }
     }
 }
@@ -480,14 +524,17 @@ void RiscVCodeGen::emitLoad(DesignatorExpr& des) {
     auto* sym = sym_.lookup(lookupName);
     if (!sym) sym = sym_.lookup(baseName);
 
-    // Если константа — просто li
-    if (sym && sym->kind == Symbol::Const) {
+    if (!sym && dotPos != std::string::npos) {
+        sym = sym_.lookup(baseName.substr(0, dotPos));
+    }
+
+    if (sym && sym->kind == Symbol::Const && des.selectors.empty()) {
         emit_.text("li a0, " + std::to_string(sym->constValue));
         return;
     }
 
     emitAddress(des);
-    emit_.text("lw a0, 0(a0)"); // загрузить значение по адресу
+    emit_.text("lw a0, 0(a0)");
 }
 
 // ============================================================
@@ -601,11 +648,21 @@ bool RiscVCodeGen::tryEmitBuiltinCall(DesignatorExpr& des) {
         return true;
     }
 
-    // NEW(ptr) — выделение памяти через sbrk
     if (proc == "NEW" && module.empty()) {
-        // TODO: определить размер типа через TypeInfo
-        emit_.text("li a0, 256"); // размер по умолчанию
-        emit_.text("li a7, 9");   // sbrk
+        int allocSize = 4;
+        if (!args->args.empty()) {
+            if (auto* d = dynamic_cast<DesignatorExpr*>(args->args[0].get())) {
+                std::string lname = d->baseName;
+                auto dotP = lname.find('.');
+                if (dotP != std::string::npos) lname = lname.substr(dotP + 1);
+                auto* s = sym_.lookup(lname);
+                if (s && s->type && s->type->kind == TypeInfo::TPointer && s->type->pointeeType)
+                    allocSize = s->type->pointeeType->size;
+            }
+        }
+        if (allocSize < 4) allocSize = 4;
+        emit_.text("li a0, " + std::to_string(allocSize));
+        emit_.text("li a7, 9");
         emit_.text("ecall");
         if (!args->args.empty()) {
             if (auto* d = dynamic_cast<DesignatorExpr*>(args->args[0].get())) {

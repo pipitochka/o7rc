@@ -53,11 +53,62 @@ void IRBuilder::emitStatements(const std::vector<StmtPtr>& stmts) {
 
 int IRBuilder::typeSize(TypeNode* t) {
     if (!t) return 4;
+    if (auto* named = dynamic_cast<NamedType*>(t)) {
+        auto it = typeLayouts_.find(named->name);
+        if (it != typeLayouts_.end()) return it->second.size;
+        return 4;
+    }
     if (auto* arr = dynamic_cast<ArrayType*>(t)) {
         int len = arrayLength(t);
         return len * typeSize(arr->elemType.get());
     }
+    if (auto* rec = dynamic_cast<RecordType*>(t)) {
+        int total = 0;
+        for (auto& fd : rec->fields) {
+            int fSize = typeSize(fd->type.get());
+            total += static_cast<int>(fd->names.size()) * fSize;
+        }
+        return total > 0 ? total : 4;
+    }
+    if (dynamic_cast<PointerType*>(t)) return 4;
     return 4;
+}
+
+std::string IRBuilder::resolveTypeName(TypeNode* t) {
+    if (!t) return "";
+    if (auto* named = dynamic_cast<NamedType*>(t))
+        return named->name;
+    if (auto* ptr = dynamic_cast<PointerType*>(t)) {
+        if (auto* base = dynamic_cast<NamedType*>(ptr->baseType.get()))
+            return "PTR:" + base->name;
+    }
+    return "";
+}
+
+void IRBuilder::registerTypeLayout(const std::string& name, TypeNode* t) {
+    if (auto* rec = dynamic_cast<RecordType*>(t)) {
+        TypeLayout layout;
+        layout.kind = TypeLayout::Record;
+        int offset = 0;
+        for (auto& fd : rec->fields) {
+            int fSize = typeSize(fd->type.get());
+            std::string fTypeName = resolveTypeName(fd->type.get());
+            for (auto& fname : fd->names) {
+                layout.fields.push_back({fname, offset, fSize, fTypeName});
+                offset += fSize;
+            }
+        }
+        layout.size = offset > 0 ? offset : 4;
+        typeLayouts_[name] = layout;
+    } else if (auto* ptr = dynamic_cast<PointerType*>(t)) {
+        TypeLayout layout;
+        layout.kind = TypeLayout::Pointer;
+        layout.size = 4;
+        if (auto* base = dynamic_cast<NamedType*>(ptr->baseType.get()))
+            layout.pointeeName = base->name;
+        typeLayouts_[name] = layout;
+        typeLayouts_["PTR:" + layout.pointeeName] = layout;
+    }
 }
 
 int IRBuilder::arrayLength(TypeNode* t) {
@@ -112,11 +163,19 @@ void IRBuilder::visit(ConstDecl& d) {
     constants_[d.name] = {val};
 }
 
-void IRBuilder::visit(TypeDecl&) {}
+void IRBuilder::visit(TypeDecl& d) {
+    registerTypeLayout(d.name, d.type.get());
+}
 
 void IRBuilder::visit(VarDecl& d) {
     int size = typeSize(d.type.get());
     int arrLen = arrayLength(d.type.get());
+    std::string tName = resolveTypeName(d.type.get());
+
+    if (auto* ptr = dynamic_cast<PointerType*>(d.type.get())) {
+        if (typeLayouts_.find(tName) == typeLayouts_.end())
+            registerTypeLayout(tName, d.type.get());
+    }
 
     for (auto& name : d.names) {
         if (inGlobalScope_) {
@@ -125,13 +184,16 @@ void IRBuilder::visit(VarDecl& d) {
             g.name = name;
             g.label = label;
             g.size = size;
-            g.isArray = (dynamic_cast<ArrayType*>(d.type.get()) != nullptr);
+            g.isArray = (dynamic_cast<ArrayType*>(d.type.get()) != nullptr) ||
+                        (dynamic_cast<RecordType*>(d.type.get()) != nullptr) ||
+                        (size > 4);
             module_.globals.push_back(g);
 
             VarInfo vi;
             vi.isGlobal = true;
             vi.globalLabel = label;
             vi.arrayLen = arrLen;
+            vi.typeName = tName;
             scopes_.back()[name] = vi;
         } else {
             IRValue addr = curFunc_->freshTemp();
@@ -147,6 +209,7 @@ void IRBuilder::visit(VarDecl& d) {
             vi.addr = addr;
             vi.isGlobal = false;
             vi.arrayLen = arrLen;
+            vi.typeName = tName;
             curFunc_->locals[name] = {addr.id, size, false};
             scopes_.back()[name] = vi;
         }
@@ -207,6 +270,7 @@ void IRBuilder::visit(ProcDecl& proc) {
                 vi.addr = addr;
                 vi.isGlobal = false;
                 vi.isVarParam = section->isVar;
+                vi.typeName = resolveTypeName(section->type.get());
                 scopes_.back()[pname] = vi;
                 curFunc_->locals[pname] = {addr.id, 4, section->isVar};
 
@@ -362,6 +426,13 @@ IRValue IRBuilder::emitAddress(DesignatorExpr& des) {
     auto* vi = lookupVar(lookupName);
     if (!vi) vi = lookupVar(baseName);
 
+    std::string implicitField;
+    if (!vi && dotPos != std::string::npos) {
+        std::string firstPart = baseName.substr(0, dotPos);
+        vi = lookupVar(firstPart);
+        if (vi) implicitField = baseName.substr(dotPos + 1);
+    }
+
     if (!vi) {
         IRValue dst = curFunc_->freshTemp();
         IRInstr instr;
@@ -391,10 +462,78 @@ IRValue IRBuilder::emitAddress(DesignatorExpr& des) {
         addr = vi->addr;
     }
 
+    std::string curTypeName = vi ? vi->typeName : "";
+
+    if (!implicitField.empty()) {
+        auto tit = typeLayouts_.find(curTypeName);
+        if (tit != typeLayouts_.end() && tit->second.kind == TypeLayout::Pointer) {
+            IRValue newAddr = curFunc_->freshTemp();
+            IRInstr load;
+            load.op = IROp::Load;
+            load.dst = newAddr;
+            load.src1 = addr;
+            emit(load);
+            addr = newAddr;
+            curTypeName = tit->second.pointeeName;
+            tit = typeLayouts_.find(curTypeName);
+        }
+        if (tit != typeLayouts_.end() && tit->second.kind == TypeLayout::Record) {
+            for (auto& f : tit->second.fields) {
+                if (f.name == implicitField) {
+                    if (f.offset != 0) {
+                        IRValue offConst = IRValue::constant(f.offset);
+                        IRValue newAddr = curFunc_->freshTemp();
+                        IRInstr add;
+                        add.op = IROp::Add;
+                        add.dst = newAddr;
+                        add.src1 = addr;
+                        add.src2 = offConst;
+                        emit(add);
+                        addr = newAddr;
+                    }
+                    curTypeName = f.typeName;
+                    break;
+                }
+            }
+        }
+    }
+
     for (auto& sel : des.selectors) {
         if (dynamic_cast<ArgsSelector*>(sel.get())) break;
 
-        if (auto* idx = dynamic_cast<IndexSelector*>(sel.get())) {
+        if (auto* field = dynamic_cast<FieldSelector*>(sel.get())) {
+            auto tit = typeLayouts_.find(curTypeName);
+            if (tit != typeLayouts_.end() && tit->second.kind == TypeLayout::Pointer) {
+                IRValue newAddr = curFunc_->freshTemp();
+                IRInstr load;
+                load.op = IROp::Load;
+                load.dst = newAddr;
+                load.src1 = addr;
+                emit(load);
+                addr = newAddr;
+                curTypeName = tit->second.pointeeName;
+                tit = typeLayouts_.find(curTypeName);
+            }
+            if (tit != typeLayouts_.end() && tit->second.kind == TypeLayout::Record) {
+                for (auto& f : tit->second.fields) {
+                    if (f.name == field->name) {
+                        if (f.offset != 0) {
+                            IRValue offConst = IRValue::constant(f.offset);
+                            IRValue newAddr = curFunc_->freshTemp();
+                            IRInstr add;
+                            add.op = IROp::Add;
+                            add.dst = newAddr;
+                            add.src1 = addr;
+                            add.src2 = offConst;
+                            emit(add);
+                            addr = newAddr;
+                        }
+                        curTypeName = f.typeName;
+                        break;
+                    }
+                }
+            }
+        } else if (auto* idx = dynamic_cast<IndexSelector*>(sel.get())) {
             if (!idx->index.empty()) {
                 IRValue index = emitExpr(*idx->index[0]);
                 IRValue newAddr = curFunc_->freshTemp();
@@ -414,6 +553,9 @@ IRValue IRBuilder::emitAddress(DesignatorExpr& des) {
             load.src1 = addr;
             emit(load);
             addr = newAddr;
+            auto tit = typeLayouts_.find(curTypeName);
+            if (tit != typeLayouts_.end() && tit->second.kind == TypeLayout::Pointer)
+                curTypeName = tit->second.pointeeName;
         }
     }
 
@@ -428,7 +570,14 @@ IRValue IRBuilder::emitLoad(DesignatorExpr& des) {
 
     auto cit = constants_.find(lookupName);
     if (cit == constants_.end()) cit = constants_.find(baseName);
-    if (cit != constants_.end() && des.selectors.empty()) {
+
+    bool isFieldAccess = false;
+    if (dotPos != std::string::npos && cit == constants_.end()) {
+        auto* vi = lookupVar(baseName.substr(0, dotPos));
+        if (vi) isFieldAccess = true;
+    }
+
+    if (cit != constants_.end() && des.selectors.empty() && !isFieldAccess) {
         lastVal_ = IRValue::constant(cit->second.value);
         return lastVal_;
     }
@@ -608,11 +757,26 @@ bool IRBuilder::tryEmitBuiltin(DesignatorExpr& des) {
     }
 
     if (proc == "NEW" && mod.empty()) {
+        int allocSize = 4;
+        if (!args->args.empty()) {
+            if (auto* d = dynamic_cast<DesignatorExpr*>(args->args[0].get())) {
+                auto* vi = lookupVar(d->baseName);
+                if (vi) {
+                    auto tit = typeLayouts_.find(vi->typeName);
+                    if (tit != typeLayouts_.end() && tit->second.kind == TypeLayout::Pointer) {
+                        auto pit = typeLayouts_.find(tit->second.pointeeName);
+                        if (pit != typeLayouts_.end())
+                            allocSize = pit->second.size;
+                    }
+                }
+            }
+        }
+        if (allocSize < 4) allocSize = 4;
         IRValue dst = curFunc_->freshTemp();
         IRInstr sc;
         sc.op = IROp::Syscall;
         sc.syscallNum = 9;
-        sc.args = {IRValue::constant(256)};
+        sc.args = {IRValue::constant(allocSize)};
         sc.dst = dst;
         emit(sc);
         if (!args->args.empty()) {
