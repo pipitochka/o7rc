@@ -5,6 +5,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <cstring>
 
 class IRBuilder : public IVisitor {
 public:
