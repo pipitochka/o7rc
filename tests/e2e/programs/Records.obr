@@ -1,0 +1,28 @@
+MODULE Records;
+IMPORT Out;
+
+TYPE
+    Point = RECORD
+        x, y: INTEGER
+    END;
+
+VAR
+    p: POINTER TO Point;
+    r: Point;
+
+BEGIN
+    r.x := 10;
+    r.y := 20;
+    Out.Int(r.x, 0);
+    Out.Ln;
+    Out.Int(r.y, 0);
+    Out.Ln;
+
+    NEW(p);
+    p.x := 30;
+    p.y := 40;
+    Out.Int(p.x, 0);
+    Out.Ln;
+    Out.Int(p.y, 0);
+    Out.Ln
+END Records.

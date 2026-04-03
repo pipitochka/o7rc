@@ -63,6 +63,7 @@ private:
     Emitter emit_;
     SymbolTable sym_;
     TypeRegistry types_;
+    std::unordered_map<std::string, TypeInfo*> namedTypes_;
 
     bool inGlobalScope_ = false;
 
