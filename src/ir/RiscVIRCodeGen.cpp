@@ -101,7 +101,7 @@ void RiscVIRCodeGen::emitFunction(const IRFunction& fn, const std::string& label
     // Store params from registers to stack slots
     for (int i = 0; i < static_cast<int>(fn.params.size()) && i < 8; ++i) {
         int pslot = slots_[-1000 - i].offset;
-        emit_.text("sw a" + std::to_string(i) + ", " + std::to_string(frameSize_ + pslot) + "(sp)");
+        emit_.text("sw a" + std::to_string(i) + ", " + std::to_string(pslot) + "(sp)");
     }
 
     for (auto& bb : fn.blocks) {
