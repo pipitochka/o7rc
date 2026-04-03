@@ -17,6 +17,7 @@ private:
         int offset;
     };
     std::unordered_map<int, SlotInfo> slots_;
+    std::unordered_map<int, int> allocaDataOffset_;
     int frameSize_ = 0;
     int nextSlot_ = 0;
 

@@ -30,8 +30,10 @@ std::string RiscVIRCodeGen::blockLabel(const IRFunction& fn, int bbId) {
 
 void RiscVIRCodeGen::allocateSlots(const IRFunction& fn) {
     slots_.clear();
+    allocaDataOffset_.clear();
     nextSlot_ = 0;
 
+    // Pass 1: allocate slots for all temporaries (pointer/value storage)
     for (auto& bb : fn.blocks) {
         for (auto& instr : bb->instrs) {
             auto ensure = [&](const IRValue& v) {
@@ -55,7 +57,20 @@ void RiscVIRCodeGen::allocateSlots(const IRFunction& fn) {
         }
     }
 
-    // +8 for ra and s0 saved at top of frame
+    // Pass 2: allocate separate data areas for alloca instructions
+    for (auto& bb : fn.blocks) {
+        for (auto& instr : bb->instrs) {
+            if (instr.op == IROp::Alloca && instr.dst.isTemp()) {
+                int size = 4;
+                if (instr.src1.isConst() && instr.src1.constVal > 0)
+                    size = static_cast<int>(instr.src1.constVal);
+                size = (size + 3) & ~3;
+                allocaDataOffset_[instr.dst.id] = nextSlot_;
+                nextSlot_ += size;
+            }
+        }
+    }
+
     frameSize_ = nextSlot_ + 8;
     frameSize_ = (frameSize_ + 15) & ~15;
 }
@@ -134,8 +149,8 @@ void RiscVIRCodeGen::emitBlock(const BasicBlock& bb) {
 void RiscVIRCodeGen::emitInstr(const IRInstr& instr) {
     switch (instr.op) {
         case IROp::Alloca: {
-            int off = slotOf(instr.dst.id);
-            emit_.text("addi a0, sp, " + std::to_string(off));
+            int dataOff = allocaDataOffset_[instr.dst.id];
+            emit_.text("addi a0, sp, " + std::to_string(dataOff));
             storeToSlot(instr.dst.id, "a0");
             break;
         }
