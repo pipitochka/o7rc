@@ -6,6 +6,7 @@
 #include <parser/IParser.h>
 #include <tokenizer/ITokenizer.h>
 #include <util/ast/Ast.h>
+#include <sema/Sema.h>
 
 #ifdef USE_FLEX
 #include <tokenizer/impl/flex/FlexTokenizer.h>
@@ -51,6 +52,7 @@ int main(int argc, char* argv[]) {
     bool dumpIR = false;
     bool dumpIRPasses = false;
     bool optimize = false;
+    bool skipSema = false;
     std::string dotPath;
 
     for (int i = 1; i < argc; ++i) {
@@ -76,6 +78,8 @@ int main(int argc, char* argv[]) {
         } else if (arg == "--dump-dot" && i + 1 < argc) {
             useIR = true;
             dotPath = argv[++i];
+        } else if (arg == "--no-sema") {
+            skipSema = true;
         } else if (inputPath.empty()) {
             inputPath = arg;
         }
@@ -162,6 +166,16 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "Parsed module: " << result->name << "\n";
+
+    if (!skipSema) {
+        Sema sema;
+        auto semaErrors = sema.analyze(*result);
+        if (!semaErrors.empty()) {
+            for (auto& e : semaErrors)
+                std::cerr << "sema: " << e.str() << "\n";
+            return 1;
+        }
+    }
 
     if (outputPath.empty()) {
         outputPath = inputPath;
