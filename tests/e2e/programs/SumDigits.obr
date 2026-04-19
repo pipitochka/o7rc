@@ -1,0 +1,20 @@
+MODULE SumDigits;
+IMPORT Out;
+
+PROCEDURE DigitSum(n: INTEGER): INTEGER;
+VAR s: INTEGER;
+BEGIN
+    IF n < 0 THEN n := -n END;
+    s := 0;
+    WHILE n > 0 DO
+        s := s + n MOD 10;
+        n := n DIV 10
+    END
+RETURN s
+END DigitSum;
+
+BEGIN
+    Out.Int(DigitSum(12345), 0); Out.Ln;
+    Out.Int(DigitSum(9999), 0); Out.Ln;
+    Out.Int(DigitSum(100), 0); Out.Ln
+END SumDigits.

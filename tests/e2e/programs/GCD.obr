@@ -1,0 +1,24 @@
+MODULE GCD;
+IMPORT Out;
+
+PROCEDURE Gcd(a, b: INTEGER): INTEGER;
+BEGIN
+    WHILE b # 0 DO
+        a := a MOD b;
+        IF b > a THEN
+            a := a + b;
+            b := a - b;
+            a := a - b
+        END
+    END
+RETURN a
+END Gcd;
+
+BEGIN
+    Out.Int(Gcd(48, 18), 0);
+    Out.Ln;
+    Out.Int(Gcd(100, 75), 0);
+    Out.Ln;
+    Out.Int(Gcd(17, 13), 0);
+    Out.Ln
+END GCD.

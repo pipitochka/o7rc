@@ -1,0 +1,15 @@
+MODULE ReadClassify;
+IMPORT In, Out;
+VAR x: INTEGER;
+BEGIN
+    In.Open;
+    In.Int(x);
+    IF x > 0 THEN
+        Out.Int(1, 0)
+    ELSIF x = 0 THEN
+        Out.Int(0, 0)
+    ELSE
+        Out.Int(-1, 0)
+    END;
+    Out.Ln
+END ReadClassify.

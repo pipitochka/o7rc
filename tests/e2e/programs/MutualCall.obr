@@ -1,0 +1,41 @@
+MODULE MutualCall;
+IMPORT Out;
+VAR
+    a: ARRAY 8 OF INTEGER;
+    i, minVal, maxVal: INTEGER;
+
+PROCEDURE Min(x, y: INTEGER): INTEGER;
+VAR r: INTEGER;
+BEGIN
+    IF x < y THEN r := x ELSE r := y END
+RETURN r
+END Min;
+
+PROCEDURE Max(x, y: INTEGER): INTEGER;
+VAR r: INTEGER;
+BEGIN
+    IF x > y THEN r := x ELSE r := y END
+RETURN r
+END Max;
+
+PROCEDURE Clamp(val, lo, hi: INTEGER): INTEGER;
+RETURN Max(lo, Min(val, hi))
+END Clamp;
+
+BEGIN
+    a[0] := 38; a[1] := 5; a[2] := 72; a[3] := 14;
+    a[4] := 91; a[5] := 3; a[6] := 66; a[7] := 47;
+
+    minVal := a[0];
+    maxVal := a[0];
+    FOR i := 1 TO 7 DO
+        minVal := Min(minVal, a[i]);
+        maxVal := Max(maxVal, a[i])
+    END;
+    Out.Int(minVal, 0); Out.Ln;
+    Out.Int(maxVal, 0); Out.Ln;
+
+    Out.Int(Clamp(50, 10, 40), 0); Out.Ln;
+    Out.Int(Clamp(5, 10, 40), 0); Out.Ln;
+    Out.Int(Clamp(25, 10, 40), 0); Out.Ln
+END MutualCall.

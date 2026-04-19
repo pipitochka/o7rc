@@ -1,9 +1,43 @@
 #include "RiscVCodeGen.h"
+#include <module/ModuleLoader.h>
 #include <stdexcept>
 #include <cstring>
 
 void RiscVCodeGen::generate(Module& module, std::ostream& out) {
     module.accept(*this);
+    emit_.writeTo(out);
+}
+
+void RiscVCodeGen::generate(Module& module, std::ostream& out,
+                            const std::vector<ModuleInfo>& imports) {
+    sym_.enterScope();
+    inGlobalScope_ = true;
+
+    for (auto& mi : imports) {
+        std::string savedModule = moduleName_;
+        moduleName_ = mi.name;
+        for (auto& d : mi.ast->decls) {
+            if (auto* cd = dynamic_cast<ConstDecl*>(d.get())) {
+                if (!cd->exported) continue;
+                cd->accept(*this);
+            } else if (auto* td = dynamic_cast<TypeDecl*>(d.get())) {
+                if (!td->exported) continue;
+                td->accept(*this);
+            } else if (auto* vd = dynamic_cast<VarDecl*>(d.get())) {
+                vd->accept(*this);
+            } else if (auto* pd = dynamic_cast<ProcDecl*>(d.get())) {
+                if (!pd->exported) continue;
+                pd->accept(*this);
+            }
+        }
+        moduleName_ = savedModule;
+    }
+
+    inGlobalScope_ = false;
+
+    module.accept(*this);
+
+    sym_.leaveScope();
     emit_.writeTo(out);
 }
 
@@ -593,7 +627,10 @@ bool RiscVCodeGen::tryEmitBuiltinCall(DesignatorExpr& des) {
         return true;
     }
 
-    // In.Int(VAR x) — чтение целого числа
+    if (module == "In" && proc == "Open") {
+        return true;
+    }
+
     if (module == "In" && proc == "Int") {
         emit_.text("li a7, 5");
         emit_.text("ecall");
@@ -758,6 +795,10 @@ void RiscVCodeGen::visit(CallStmt& s) {
         emit_.text("li a0, 10");
         emit_.text("li a7, 11");
         emit_.text("ecall");
+        return;
+    }
+
+    if (module == "In" && proc == "Open") {
         return;
     }
 

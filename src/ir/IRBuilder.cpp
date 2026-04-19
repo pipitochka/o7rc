@@ -1,9 +1,44 @@
 #include "IRBuilder.h"
+#include <module/ModuleLoader.h>
 #include <stdexcept>
 
 IRModule IRBuilder::build(Module& module) {
     module_ = IRModule{};
     module.accept(*this);
+    return std::move(module_);
+}
+
+IRModule IRBuilder::build(Module& module, const std::vector<ModuleInfo>& imports) {
+    module_ = IRModule{};
+
+    pushScope();
+    inGlobalScope_ = true;
+
+    for (auto& mi : imports) {
+        std::string savedModule = moduleName_;
+        moduleName_ = mi.name;
+        for (auto& d : mi.ast->decls) {
+            if (auto* cd = dynamic_cast<ConstDecl*>(d.get())) {
+                if (!cd->exported) continue;
+                cd->accept(*this);
+            } else if (auto* td = dynamic_cast<TypeDecl*>(d.get())) {
+                if (!td->exported) continue;
+                td->accept(*this);
+            } else if (auto* vd = dynamic_cast<VarDecl*>(d.get())) {
+                vd->accept(*this);
+            } else if (auto* pd = dynamic_cast<ProcDecl*>(d.get())) {
+                if (!pd->exported) continue;
+                pd->accept(*this);
+            }
+        }
+        moduleName_ = savedModule;
+    }
+
+    inGlobalScope_ = false;
+
+    module.accept(*this);
+
+    popScope();
     return std::move(module_);
 }
 
@@ -226,6 +261,7 @@ void IRBuilder::visit(ProcDecl& proc) {
 
     IRFunction fn;
     fn.name = proc.name;
+    fn.moduleName = moduleName_;
 
     auto* sig = dynamic_cast<ProcType*>(proc.type.get());
     fn.hasReturn = (sig && sig->type && !sig->type->name.empty());
@@ -611,6 +647,13 @@ void IRBuilder::visit(DesignatorExpr& des) {
             call.op = IROp::Call;
             call.dst = dst;
             call.name = procName;
+
+            auto* vi = lookupVar(procName);
+            if (vi && !vi->globalLabel.empty())
+                call.name = vi->globalLabel;
+            else
+                call.name = "proc_" + moduleName_ + "_" + procName;
+
             call.args = std::move(callArgs);
             emit(call);
             lastVal_ = dst;
@@ -669,6 +712,11 @@ bool IRBuilder::tryEmitBuiltin(DesignatorExpr& des) {
             sc.args = {v};
             emit(sc);
         }
+        lastVal_ = IRValue::voidVal();
+        return true;
+    }
+
+    if (mod == "In" && proc == "Open") {
         lastVal_ = IRValue::voidVal();
         return true;
     }
@@ -936,6 +984,10 @@ void IRBuilder::visit(CallStmt& s) {
         sc.syscallNum = 11;
         sc.args = {IRValue::constant(10)};
         emit(sc);
+        return;
+    }
+
+    if (mod == "In" && proc == "Open") {
         return;
     }
 

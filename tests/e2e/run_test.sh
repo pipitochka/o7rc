@@ -22,11 +22,18 @@ shift 5
 EXTRA_ARGS=("$@")
 
 TEST_NAME=$(basename "${SOURCE}" .obr)
+SOURCE_DIR=$(dirname "${SOURCE}")
+INPUT_FILE="${SOURCE_DIR}/${TEST_NAME}.in"
 TMPDIR=$(mktemp -d)
 ASM="${TMPDIR}/${TEST_NAME}.asm"
 
 cleanup() { rm -rf "${TMPDIR}"; }
 trap cleanup EXIT
+
+STDIN_REDIRECT="/dev/null"
+if [ -f "${INPUT_FILE}" ]; then
+    STDIN_REDIRECT="${INPUT_FILE}"
+fi
 
 MODULE_NAME=$(sed -n 's/^MODULE \([A-Za-z_][A-Za-z0-9_]*\).*/\1/p' "${SOURCE}" | head -1)
 if [ -z "${MODULE_NAME}" ]; then
@@ -37,6 +44,24 @@ fi
 OBNC_DIR="${TMPDIR}/obnc_build"
 mkdir -p "${OBNC_DIR}"
 cp "${SOURCE}" "${OBNC_DIR}/${MODULE_NAME}.obn"
+
+# Copy imported modules (from -M paths) so OBNC can find them
+i=0
+while [ $i -lt ${#EXTRA_ARGS[@]} ]; do
+    if [ "${EXTRA_ARGS[$i]}" = "-M" ] || [ "${EXTRA_ARGS[$i]}" = "--module-path" ]; then
+        i=$((i + 1))
+        MDIR="${EXTRA_ARGS[$i]}"
+        if [ -d "${MDIR}" ]; then
+            for mf in "${MDIR}"/*.obr "${MDIR}"/*.obn; do
+                [ -f "$mf" ] || continue
+                mbase=$(basename "$mf")
+                mname="${mbase%.*}"
+                cp "$mf" "${OBNC_DIR}/${mname}.obn" 2>/dev/null || true
+            done
+        fi
+    fi
+    i=$((i + 1))
+done
 
 OBNC_BIN_DIR=$(dirname "${OBNC}")
 OBNC_PREFIX=$(cd "${OBNC_BIN_DIR}/.." && pwd)
@@ -50,7 +75,7 @@ if ! (cd "${OBNC_DIR}" && "${OBNC}" "${MODULE_NAME}.obn" 2>"${TMPDIR}/obnc.err")
     exit 4
 fi
 
-EXPECTED=$("${OBNC_DIR}/${MODULE_NAME}" 2>/dev/null) || {
+EXPECTED=$("${OBNC_DIR}/${MODULE_NAME}" <"${STDIN_REDIRECT}" 2>/dev/null) || {
     echo "FAIL [${TEST_NAME}]: OBNC binary crashed"
     exit 4
 }
@@ -61,7 +86,7 @@ if ! "${O7RC}" "${SOURCE}" -o "${ASM}" "${EXTRA_ARGS[@]}" 2>"${TMPDIR}/compile.e
     exit 1
 fi
 
-ACTUAL=$("${JAVA}" -jar "${RARS_JAR}" nc sm "${ASM}" 2>"${TMPDIR}/rars.err") || {
+ACTUAL=$("${JAVA}" -jar "${RARS_JAR}" nc sm "${ASM}" <"${STDIN_REDIRECT}" 2>"${TMPDIR}/rars.err") || {
     RC=$?
     echo "FAIL [${TEST_NAME}]: RARS exited with code ${RC}"
     cat "${TMPDIR}/rars.err"

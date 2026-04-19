@@ -1,0 +1,15 @@
+MODULE AbsOdd;
+IMPORT Out;
+VAR x: INTEGER;
+BEGIN
+    x := -42;
+    Out.Int(ABS(x), 0);
+    Out.Ln;
+    Out.Int(ABS(7), 0);
+    Out.Ln;
+
+    IF ODD(3) THEN Out.Int(1, 0) ELSE Out.Int(0, 0) END;
+    Out.Ln;
+    IF ODD(4) THEN Out.Int(1, 0) ELSE Out.Int(0, 0) END;
+    Out.Ln
+END AbsOdd.

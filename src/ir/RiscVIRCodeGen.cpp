@@ -15,7 +15,8 @@ void RiscVIRCodeGen::generate(const IRModule& mod, std::ostream& out) {
     }
 
     for (auto& fn : mod.functions) {
-        std::string label = "proc_" + moduleName_ + "_" + fn.name;
+        std::string modPrefix = fn.moduleName.empty() ? moduleName_ : fn.moduleName;
+        std::string label = "proc_" + modPrefix + "_" + fn.name;
         emitFunction(fn, label);
     }
 
@@ -334,8 +335,7 @@ void RiscVIRCodeGen::emitInstr(const IRInstr& instr) {
                 loadValue(instr.args[i], "a" + std::to_string(i));
             }
 
-            std::string procLabel = "proc_" + moduleName_ + "_" + instr.name;
-            emit_.text("jal ra, " + procLabel);
+            emit_.text("jal ra, " + instr.name);
             storeToSlot(instr.dst.id, "a0");
             break;
         }

@@ -1,0 +1,17 @@
+MODULE RecSum;
+IMPORT Out;
+
+PROCEDURE Sum(n: INTEGER): INTEGER;
+VAR res: INTEGER;
+BEGIN
+    IF n <= 0 THEN res := 0
+    ELSE res := n + Sum(n - 1)
+    END
+RETURN res
+END Sum;
+
+BEGIN
+    Out.Int(Sum(10), 0); Out.Ln;
+    Out.Int(Sum(100), 0); Out.Ln;
+    Out.Int(Sum(0), 0); Out.Ln
+END RecSum.

@@ -16,6 +16,7 @@ struct IRGlobal {
 
 struct IRFunction {
     std::string name;
+    std::string moduleName;
     std::vector<std::string> params;
     std::vector<bool> varParams;
     bool hasReturn = false;
