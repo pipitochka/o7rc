@@ -7,9 +7,12 @@
 #include <unordered_map>
 #include <cstring>
 
+struct ModuleInfo;
+
 class IRBuilder : public IVisitor {
 public:
     IRModule build(Module& module);
+    IRModule build(Module& module, const std::vector<ModuleInfo>& imports);
 
     void visit(Module&) override;
     void visit(Import&) override;

@@ -1,0 +1,18 @@
+MODULE Power;
+IMPORT Out;
+
+PROCEDURE Pow(base, exp: INTEGER): INTEGER;
+VAR r, i: INTEGER;
+BEGIN
+    r := 1;
+    FOR i := 1 TO exp DO
+        r := r * base
+    END
+RETURN r
+END Pow;
+
+BEGIN
+    Out.Int(Pow(2, 10), 0); Out.Ln;
+    Out.Int(Pow(3, 5), 0); Out.Ln;
+    Out.Int(Pow(5, 0), 0); Out.Ln
+END Power.

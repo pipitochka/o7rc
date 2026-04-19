@@ -1,0 +1,15 @@
+MODULE ReadGCD;
+IMPORT In, Out;
+VAR a, b, t: INTEGER;
+BEGIN
+    In.Open;
+    In.Int(a);
+    In.Int(b);
+    WHILE b # 0 DO
+        t := b;
+        b := a MOD b;
+        a := t
+    END;
+    Out.Int(a, 0);
+    Out.Ln
+END ReadGCD.

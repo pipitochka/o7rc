@@ -1,0 +1,14 @@
+MODULE ReadMax;
+IMPORT In, Out;
+VAR n, i, x, mx: INTEGER;
+BEGIN
+    In.Open;
+    In.Int(n);
+    In.Int(mx);
+    FOR i := 2 TO n DO
+        In.Int(x);
+        IF x > mx THEN mx := x END
+    END;
+    Out.Int(mx, 0);
+    Out.Ln
+END ReadMax.

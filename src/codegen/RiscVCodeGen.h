@@ -11,9 +11,13 @@
 /// Стратегия: стековая модель вычисления выражений.
 /// Результат каждого выражения помещается в регистр a0.
 /// Адрес designator'а — тоже в a0 (через emitAddress).
+struct ModuleInfo;
+
 class RiscVCodeGen : public ICodeGen, public IVisitor {
 public:
     void generate(Module& module, std::ostream& out) override;
+    void generate(Module& module, std::ostream& out,
+                  const std::vector<ModuleInfo>& imports);
 
     // ---- IVisitor ----
     void visit(Module&) override;

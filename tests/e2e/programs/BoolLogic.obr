@@ -1,0 +1,24 @@
+MODULE BoolLogic;
+IMPORT Out;
+VAR a, b, c: BOOLEAN;
+    x: INTEGER;
+BEGIN
+    a := TRUE;
+    b := FALSE;
+
+    IF a & ~b THEN Out.Int(1, 0) ELSE Out.Int(0, 0) END;
+    Out.Ln;
+
+    IF a OR b THEN Out.Int(1, 0) ELSE Out.Int(0, 0) END;
+    Out.Ln;
+
+    IF ~a THEN Out.Int(1, 0) ELSE Out.Int(0, 0) END;
+    Out.Ln;
+
+    IF b OR b THEN Out.Int(1, 0) ELSE Out.Int(0, 0) END;
+    Out.Ln;
+
+    c := a & b;
+    IF c THEN Out.Int(1, 0) ELSE Out.Int(0, 0) END;
+    Out.Ln
+END BoolLogic.

@@ -1,0 +1,13 @@
+MODULE NestedLoop;
+IMPORT Out;
+VAR i, j, sum: INTEGER;
+BEGIN
+    sum := 0;
+    FOR i := 1 TO 4 DO
+        FOR j := 1 TO i DO
+            sum := sum + j
+        END
+    END;
+    Out.Int(sum, 0);
+    Out.Ln
+END NestedLoop.

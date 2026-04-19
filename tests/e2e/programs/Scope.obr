@@ -1,0 +1,20 @@
+MODULE Scope;
+IMPORT Out;
+VAR x: INTEGER;
+
+PROCEDURE Inner(n: INTEGER): INTEGER;
+VAR x: INTEGER;
+BEGIN
+    x := n * 10
+RETURN x
+END Inner;
+
+BEGIN
+    x := 5;
+    Out.Int(x, 0);
+    Out.Ln;
+    Out.Int(Inner(3), 0);
+    Out.Ln;
+    Out.Int(x, 0);
+    Out.Ln
+END Scope.

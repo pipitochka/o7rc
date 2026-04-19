@@ -40,6 +40,7 @@
 #include <ir/passes/ConstantFolding.h>
 #include <ir/passes/CopyPropagation.h>
 #include <ir/passes/DeadCodeElim.h>
+#include <module/ModuleLoader.h>
 
 int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
@@ -54,6 +55,7 @@ int main(int argc, char* argv[]) {
     bool optimize = false;
     bool skipSema = false;
     std::string dotPath;
+    std::vector<std::string> modulePaths;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -80,6 +82,8 @@ int main(int argc, char* argv[]) {
             dotPath = argv[++i];
         } else if (arg == "--no-sema") {
             skipSema = true;
+        } else if ((arg == "--module-path" || arg == "-M") && i + 1 < argc) {
+            modulePaths.push_back(argv[++i]);
         } else if (inputPath.empty()) {
             inputPath = arg;
         }
@@ -167,8 +171,68 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Parsed module: " << result->name << "\n";
 
+    // --- Module loading ---
+    auto makeParserForPath = [&](const std::string& path) -> ModulePtr {
+        auto modFile = std::make_unique<std::ifstream>(path);
+        if (!modFile || !*modFile) return nullptr;
+        ITokenizerPtr modTok;
+#if defined(USE_FLEX) && defined(USE_HAND_TOKENIZER)
+        if (tokenizerChoice == "hand")
+            modTok = std::make_shared<HandTokenizer>(*modFile);
+        else
+            modTok = std::make_shared<FlexTokenizer>(*modFile);
+#elif defined(USE_FLEX)
+        modTok = std::make_shared<FlexTokenizer>(*modFile);
+#elif defined(USE_HAND_TOKENIZER)
+        modTok = std::make_shared<HandTokenizer>(*modFile);
+#endif
+        auto modParser = std::unique_ptr<IParser>();
+#if defined(USE_BISON) && defined(USE_HAND_PARSER)
+        if (parserChoice == "hand")
+            modParser = std::make_unique<HandParser>();
+        else
+            modParser = std::make_unique<BisonParser>();
+#elif defined(USE_BISON)
+        modParser = std::make_unique<BisonParser>();
+#elif defined(USE_HAND_PARSER)
+        modParser = std::make_unique<HandParser>();
+#endif
+        if (!modTok || !modParser) return nullptr;
+        return modParser->parse(modTok);
+    };
+
+    ModuleLoader moduleLoader;
+    moduleLoader.setParserFactory(makeParserForPath);
+
+    {
+        std::string inputDir = inputPath;
+        auto slashPos = inputDir.rfind('/');
+        if (slashPos != std::string::npos)
+            inputDir = inputDir.substr(0, slashPos);
+        else
+            inputDir = ".";
+        moduleLoader.addSearchPath(inputDir);
+    }
+
+    for (auto& mp : modulePaths)
+        moduleLoader.addSearchPath(mp);
+
+    if (!moduleLoader.loadImports(*result)) {
+        std::cerr << "Failed to load imported modules\n";
+        return 1;
+    }
+
     if (!skipSema) {
         Sema sema;
+        for (auto& mi : moduleLoader.loaded()) {
+            auto errors = sema.analyze(*mi.ast);
+            if (!errors.empty()) {
+                for (auto& e : errors)
+                    std::cerr << "sema [" << mi.name << "]: " << e.str() << "\n";
+                return 1;
+            }
+        }
+
         auto semaErrors = sema.analyze(*result);
         if (!semaErrors.empty()) {
             for (auto& e : semaErrors)
@@ -185,9 +249,13 @@ int main(int argc, char* argv[]) {
         outputPath += ".asm";
     }
 
+    const auto& loadedModules = moduleLoader.loaded();
+
     if (useIR) {
         IRBuilder irBuilder;
-        auto irMod = irBuilder.build(*result);
+        auto irMod = loadedModules.empty()
+            ? irBuilder.build(*result)
+            : irBuilder.build(*result, loadedModules);
 
         if (dumpIR) {
             IRPrinter printer;
@@ -243,7 +311,10 @@ int main(int argc, char* argv[]) {
         }
 
         RiscVCodeGen codegen;
-        codegen.generate(*result, outFile);
+        if (loadedModules.empty())
+            codegen.generate(*result, outFile);
+        else
+            codegen.generate(*result, outFile, loadedModules);
         outFile.close();
         std::cout << "Generated: " << outputPath << "\n";
     }

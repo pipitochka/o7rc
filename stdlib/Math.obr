@@ -1,0 +1,66 @@
+MODULE Math;
+
+PROCEDURE Abs*(x: INTEGER): INTEGER;
+VAR r: INTEGER;
+BEGIN
+    IF x < 0 THEN r := -x ELSE r := x END
+RETURN r
+END Abs;
+
+PROCEDURE Min*(a, b: INTEGER): INTEGER;
+VAR r: INTEGER;
+BEGIN
+    IF a < b THEN r := a ELSE r := b END
+RETURN r
+END Min;
+
+PROCEDURE Max*(a, b: INTEGER): INTEGER;
+VAR r: INTEGER;
+BEGIN
+    IF a > b THEN r := a ELSE r := b END
+RETURN r
+END Max;
+
+PROCEDURE Clamp*(val, lo, hi: INTEGER): INTEGER;
+VAR r: INTEGER;
+BEGIN
+    IF val < lo THEN r := lo
+    ELSIF val > hi THEN r := hi
+    ELSE r := val
+    END
+RETURN r
+END Clamp;
+
+PROCEDURE Power*(base, exp: INTEGER): INTEGER;
+VAR r, i: INTEGER;
+BEGIN
+    r := 1;
+    FOR i := 1 TO exp DO
+        r := r * base
+    END
+RETURN r
+END Power;
+
+PROCEDURE GCD*(a, b: INTEGER): INTEGER;
+VAR t: INTEGER;
+BEGIN
+    IF a < 0 THEN a := -a END;
+    IF b < 0 THEN b := -b END;
+    WHILE b # 0 DO
+        t := b;
+        b := a MOD b;
+        a := t
+    END
+RETURN a
+END GCD;
+
+PROCEDURE Factorial*(n: INTEGER): INTEGER;
+VAR r: INTEGER;
+BEGIN
+    IF n <= 1 THEN r := 1
+    ELSE r := n * Factorial(n - 1)
+    END
+RETURN r
+END Factorial;
+
+END Math.
