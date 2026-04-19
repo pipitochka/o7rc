@@ -132,6 +132,7 @@ void RiscVIRCodeGen::emitFunction(const IRFunction& fn, const std::string& label
     emit_.text("addi sp, sp, " + std::to_string(frameSize_));
 
     if (label == "main") {
+        emit_.text("li a0, 0");
         emit_.text("li a7, 10");
         emit_.text("ecall");
     } else {

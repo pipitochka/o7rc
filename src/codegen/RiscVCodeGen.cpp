@@ -103,9 +103,10 @@ void RiscVCodeGen::visit(Module& mod) {
     // Тело модуля (BEGIN ... END)
     emitStatements(mod.block);
 
-    // Выход
+    // Выход (a0 — код возврата для syscall 10 в RARS)
     emit_.blank();
     emit_.comment("exit");
+    emit_.text("li a0, 0");
     emit_.text("li a7, 10");
     emit_.text("ecall");
 
@@ -772,8 +773,11 @@ void RiscVCodeGen::visit(ArgsSelector&) {}
 
 void RiscVCodeGen::visit(AssignStmt& s) {
     s.rhs->accept(*this);           // a0 = value
-    emit_.text("mv t0, a0");        // t0 = value (сохраняем)
+    emit_.text("addi sp, sp, -4");
+    emit_.text("sw a0, 0(sp)");     // emitAddress (индексы) использует t0 — не держим rhs там
     emitAddress(*s.lhs);            // a0 = address of lhs
+    emit_.text("lw t0, 0(sp)");
+    emit_.text("addi sp, sp, 4");
     emit_.text("sw t0, 0(a0)");     // *lhs = value
 }
 
@@ -878,9 +882,12 @@ void RiscVCodeGen::visit(ForStmt& s) {
         emit_.text("lw t0, " + std::to_string(sym->stackOffset) + "(s0)");
     }
 
+    // to может вычисляться с временными в t0 — сохраняем i в t5 до вычисления границы
+    emit_.text("mv t5, t0");
+
     // Загрузка to
     s.to->accept(*this);                       // a0 = to
-    emit_.text("bgt t0, a0, " + endLabel);     // if i > to → end
+    emit_.text("bgt t5, a0, " + endLabel);   // if i > to → end
 
     emitStatements(s.body);
 
