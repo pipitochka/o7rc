@@ -32,7 +32,9 @@ trap cleanup EXIT
 
 STDIN_REDIRECT="/dev/null"
 if [ -f "${INPUT_FILE}" ]; then
-    STDIN_REDIRECT="${INPUT_FILE}"
+    NORMALIZED="${TMPDIR}/stdin_normalized"
+    awk 'NF { for (i = 1; i <= NF; i++) print $i }' "${INPUT_FILE}" | tr -d '\r' >"${NORMALIZED}"
+    STDIN_REDIRECT="${NORMALIZED}"
 fi
 
 MODULE_NAME=$(sed -n 's/^MODULE \([A-Za-z_][A-Za-z0-9_]*\).*/\1/p' "${SOURCE}" | head -1)
@@ -75,7 +77,7 @@ if ! (cd "${OBNC_DIR}" && "${OBNC}" "${MODULE_NAME}.obn" 2>"${TMPDIR}/obnc.err")
     exit 4
 fi
 
-EXPECTED=$("${OBNC_DIR}/${MODULE_NAME}" <"${STDIN_REDIRECT}" 2>/dev/null) || {
+EXPECTED=$("${OBNC_DIR}/${MODULE_NAME}" <"${STDIN_REDIRECT}" 2>/dev/null | tr -d '\r') || {
     echo "FAIL [${TEST_NAME}]: OBNC binary crashed"
     exit 4
 }
@@ -86,7 +88,7 @@ if ! "${O7RC}" "${SOURCE}" -o "${ASM}" "${EXTRA_ARGS[@]}" 2>"${TMPDIR}/compile.e
     exit 1
 fi
 
-ACTUAL=$("${JAVA}" -jar "${RARS_JAR}" nc sm "${ASM}" <"${STDIN_REDIRECT}" 2>"${TMPDIR}/rars.err") || {
+ACTUAL=$("${JAVA}" -jar "${RARS_JAR}" nc sm "${ASM}" <"${STDIN_REDIRECT}" 2>"${TMPDIR}/rars.err" | tr -d '\r') || {
     RC=$?
     echo "FAIL [${TEST_NAME}]: RARS exited with code ${RC}"
     cat "${TMPDIR}/rars.err"
