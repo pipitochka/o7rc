@@ -1,0 +1,27 @@
+MODULE RecordProc;
+IMPORT Out;
+
+TYPE
+    Point = RECORD x, y: INTEGER END;
+
+VAR
+    r: Point;
+    d: INTEGER;
+
+PROCEDURE Dist2(px, py: INTEGER): INTEGER;
+RETURN px * px + py * py
+END Dist2;
+
+PROCEDURE MakeSum(ax, ay: INTEGER): INTEGER;
+RETURN ax + ay
+END MakeSum;
+
+BEGIN
+    r.x := 3;
+    r.y := 4;
+    d := Dist2(r.x, r.y);
+    Out.Int(d, 0);
+    Out.Ln;
+    Out.Int(MakeSum(r.x, r.y), 0);
+    Out.Ln
+END RecordProc.

@@ -1,0 +1,10 @@
+MODULE EvenOdd;
+IMPORT Out;
+VAR i: INTEGER;
+BEGIN
+    FOR i := 1 TO 10 DO
+        IF i MOD 2 = 0 THEN
+            Out.Int(i, 0); Out.Ln
+        END
+    END
+END EvenOdd.

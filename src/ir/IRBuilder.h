@@ -7,9 +7,12 @@
 #include <unordered_map>
 #include <cstring>
 
+struct ModuleInfo;
+
 class IRBuilder : public IVisitor {
 public:
     IRModule build(Module& module);
+    IRModule build(Module& module, const std::vector<ModuleInfo>& imports);
 
     void visit(Module&) override;
     void visit(Import&) override;
@@ -65,12 +68,23 @@ private:
     struct ConstInfo { int64_t value; };
     std::unordered_map<std::string, ConstInfo> constants_;
 
+    struct TypeLayout {
+        enum Kind { Basic, Record, Pointer, Array };
+        Kind kind = Basic;
+        int size = 4;
+        struct Field { std::string name; int offset; int size; std::string typeName; };
+        std::vector<Field> fields;
+        std::string pointeeName;
+    };
+    std::unordered_map<std::string, TypeLayout> typeLayouts_;
+
     struct VarInfo {
         IRValue addr;
         bool isGlobal = false;
         bool isVarParam = false;
         std::string globalLabel;
         int arrayLen = 0;
+        std::string typeName;
     };
     std::vector<std::unordered_map<std::string, VarInfo>> scopes_;
 
@@ -90,4 +104,6 @@ private:
 
     int typeSize(TypeNode* t);
     int arrayLength(TypeNode* t);
+    std::string resolveTypeName(TypeNode* t);
+    void registerTypeLayout(const std::string& name, TypeNode* t);
 };

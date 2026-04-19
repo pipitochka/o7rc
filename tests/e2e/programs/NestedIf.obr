@@ -1,0 +1,31 @@
+MODULE NestedIf;
+IMPORT Out;
+VAR x, y: INTEGER;
+BEGIN
+    x := 15;
+    y := 7;
+    IF x > 10 THEN
+        IF y > 5 THEN
+            Out.Int(1, 0)
+        ELSE
+            Out.Int(2, 0)
+        END
+    ELSIF x > 5 THEN
+        Out.Int(3, 0)
+    ELSE
+        Out.Int(4, 0)
+    END;
+    Out.Ln;
+
+    x := 3;
+    IF x > 10 THEN
+        Out.Int(10, 0)
+    ELSIF x > 5 THEN
+        Out.Int(5, 0)
+    ELSIF x > 2 THEN
+        Out.Int(2, 0)
+    ELSE
+        Out.Int(0, 0)
+    END;
+    Out.Ln
+END NestedIf.

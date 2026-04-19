@@ -1,0 +1,23 @@
+MODULE Collatz;
+IMPORT Out;
+
+PROCEDURE Steps(n: INTEGER): INTEGER;
+VAR count: INTEGER;
+BEGIN
+    count := 0;
+    WHILE n # 1 DO
+        IF ODD(n) THEN
+            n := 3 * n + 1
+        ELSE
+            n := n DIV 2
+        END;
+        INC(count)
+    END
+RETURN count
+END Steps;
+
+BEGIN
+    Out.Int(Steps(1), 0); Out.Ln;
+    Out.Int(Steps(6), 0); Out.Ln;
+    Out.Int(Steps(27), 0); Out.Ln
+END Collatz.

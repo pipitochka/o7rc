@@ -1,0 +1,14 @@
+MODULE ReadPower;
+IMPORT In, Out;
+VAR base, exp, result, i: INTEGER;
+BEGIN
+    In.Open;
+    In.Int(base);
+    In.Int(exp);
+    result := 1;
+    FOR i := 1 TO exp DO
+        result := result * base
+    END;
+    Out.Int(result, 0);
+    Out.Ln
+END ReadPower.

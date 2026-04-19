@@ -1,0 +1,21 @@
+MODULE CaseStmt;
+IMPORT Out;
+VAR x: INTEGER;
+
+PROCEDURE Classify(n: INTEGER): INTEGER;
+VAR res: INTEGER;
+BEGIN
+    CASE n OF
+      1: res := 10
+    | 2: res := 20
+    | 3: res := 30
+    | 4, 5: res := 45
+    END
+RETURN res
+END Classify;
+
+BEGIN
+    Out.Int(Classify(1), 0); Out.Ln;
+    Out.Int(Classify(3), 0); Out.Ln;
+    Out.Int(Classify(5), 0); Out.Ln
+END CaseStmt.

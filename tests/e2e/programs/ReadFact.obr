@@ -1,0 +1,19 @@
+MODULE ReadFact;
+IMPORT In, Out;
+VAR n: INTEGER;
+
+PROCEDURE Fact(k: INTEGER): INTEGER;
+VAR res: INTEGER;
+BEGIN
+    IF k <= 1 THEN res := 1
+    ELSE res := k * Fact(k - 1)
+    END
+RETURN res
+END Fact;
+
+BEGIN
+    In.Open;
+    In.Int(n);
+    Out.Int(Fact(n), 0);
+    Out.Ln
+END ReadFact.

@@ -1,0 +1,29 @@
+MODULE MultiProc;
+IMPORT Out;
+VAR x, y: INTEGER;
+
+PROCEDURE Square(n: INTEGER): INTEGER;
+RETURN n * n
+END Square;
+
+PROCEDURE SumOfSquares(a, b: INTEGER): INTEGER;
+RETURN Square(a) + Square(b)
+END SumOfSquares;
+
+PROCEDURE Max(a, b: INTEGER): INTEGER;
+VAR res: INTEGER;
+BEGIN
+    IF a > b THEN res := a ELSE res := b END
+RETURN res
+END Max;
+
+BEGIN
+    x := SumOfSquares(3, 4);
+    Out.Int(x, 0);
+    Out.Ln;
+    y := Max(x, 30);
+    Out.Int(y, 0);
+    Out.Ln;
+    Out.Int(Max(Square(2), Square(3)), 0);
+    Out.Ln
+END MultiProc.

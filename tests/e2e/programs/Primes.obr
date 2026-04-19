@@ -1,0 +1,23 @@
+MODULE Primes;
+IMPORT Out;
+VAR i, j, n, count: INTEGER;
+    isPrime: BOOLEAN;
+BEGIN
+    n := 30;
+    count := 0;
+    FOR i := 2 TO n DO
+        isPrime := TRUE;
+        j := 2;
+        WHILE (j * j <= i) & isPrime DO
+            IF i MOD j = 0 THEN
+                isPrime := FALSE
+            END;
+            INC(j)
+        END;
+        IF isPrime THEN
+            Out.Int(i, 0); Out.Ln;
+            INC(count)
+        END
+    END;
+    Out.Int(count, 0); Out.Ln
+END Primes.

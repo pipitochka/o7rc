@@ -1,0 +1,30 @@
+MODULE LinkedList;
+IMPORT Out;
+
+TYPE
+    Node = RECORD
+        val: INTEGER;
+        next: INTEGER
+    END;
+
+VAR
+    a, b, c: POINTER TO Node;
+    sum: INTEGER;
+BEGIN
+    NEW(a);
+    a.val := 10;
+
+    NEW(b);
+    b.val := 20;
+
+    NEW(c);
+    c.val := 30;
+
+    sum := a.val + b.val + c.val;
+    Out.Int(sum, 0);
+    Out.Ln;
+    Out.Int(a.val, 0);
+    Out.Ln;
+    Out.Int(c.val, 0);
+    Out.Ln
+END LinkedList.

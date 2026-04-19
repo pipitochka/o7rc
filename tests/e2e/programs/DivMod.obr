@@ -1,0 +1,19 @@
+MODULE DivMod;
+IMPORT Out;
+VAR a, b: INTEGER;
+BEGIN
+    a := 123;
+    b := 10;
+    Out.Int(a DIV b, 0); Out.Ln;
+    Out.Int(a MOD b, 0); Out.Ln;
+
+    a := 100;
+    b := 7;
+    Out.Int(a DIV b, 0); Out.Ln;
+    Out.Int(a MOD b, 0); Out.Ln;
+
+    a := 255;
+    b := 16;
+    Out.Int(a DIV b, 0); Out.Ln;
+    Out.Int(a MOD b, 0); Out.Ln
+END DivMod.

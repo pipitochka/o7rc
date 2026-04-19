@@ -1,0 +1,12 @@
+MODULE UseMath;
+IMPORT Out, Math;
+
+BEGIN
+    Out.Int(Math.Abs(-42), 0); Out.Ln;
+    Out.Int(Math.Min(10, 3), 0); Out.Ln;
+    Out.Int(Math.Max(10, 3), 0); Out.Ln;
+    Out.Int(Math.Clamp(50, 0, 30), 0); Out.Ln;
+    Out.Int(Math.Power(2, 10), 0); Out.Ln;
+    Out.Int(Math.GCD(48, 18), 0); Out.Ln;
+    Out.Int(Math.Factorial(7), 0); Out.Ln
+END UseMath.
