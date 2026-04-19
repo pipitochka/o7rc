@@ -1241,38 +1241,75 @@ void IRBuilder::visit(CaseStmt& s) {
         if (!alt) continue;
 
         auto* bodyBB = curFunc_->createBlock();
-        auto* nextBB = curFunc_->createBlock();
+        auto* afterAltBB = curFunc_->createBlock();
 
-        for (auto& lbl : alt->labels) {
-            if (lbl->from) {
+        std::vector<size_t> validIdx;
+        for (size_t i = 0; i < alt->labels.size(); ++i) {
+            if (alt->labels[i] && alt->labels[i]->from) validIdx.push_back(i);
+        }
+
+        if (validIdx.empty()) {
+            IRInstr jmpEmpty;
+            jmpEmpty.op = IROp::Jump;
+            jmpEmpty.targetBlock = afterAltBB->id;
+            finishBlock(std::move(jmpEmpty));
+            curFunc_->linkBlocks(curBlock_->id, afterAltBB->id);
+            setBlock(afterAltBB);
+            continue;
+        }
+
+        for (size_t j = 0; j < validIdx.size(); ++j) {
+            size_t i = validIdx[j];
+            auto& lbl = alt->labels[i];
+            const bool isLast = (j + 1 == validIdx.size());
+
+            IRValue cmp = curFunc_->freshTemp();
+            if (lbl->to) {
+                IRValue fromVal = emitExpr(*lbl->from);
+                IRValue geTmp = curFunc_->freshTemp();
+                IRInstr ge;
+                ge.op = IROp::Ge;
+                ge.dst = geTmp;
+                ge.src1 = expr;
+                ge.src2 = fromVal;
+                emit(ge);
+                IRValue toVal = emitExpr(*lbl->to);
+                IRValue leTmp = curFunc_->freshTemp();
+                IRInstr le;
+                le.op = IROp::Le;
+                le.dst = leTmp;
+                le.src1 = expr;
+                le.src2 = toVal;
+                emit(le);
+                IRInstr a;
+                a.op = IROp::And;
+                a.dst = cmp;
+                a.src1 = geTmp;
+                a.src2 = leTmp;
+                emit(a);
+            } else {
                 IRValue labelVal = emitExpr(*lbl->from);
-                IRValue cmp = curFunc_->freshTemp();
                 IRInstr eq;
                 eq.op = IROp::Eq;
                 eq.dst = cmp;
                 eq.src1 = expr;
                 eq.src2 = labelVal;
                 emit(eq);
-
-                IRInstr br;
-                br.op = IROp::Branch;
-                br.src1 = cmp;
-                br.targetBlock = bodyBB->id;
-                br.falseBlock = nextBB->id;
-                finishBlock(std::move(br));
-                curFunc_->linkBlocks(curBlock_->id, bodyBB->id);
-                curFunc_->linkBlocks(curBlock_->id, nextBB->id);
-
-                auto* contBB = curFunc_->createBlock();
-                setBlock(contBB);
-                nextBB = contBB;
             }
-        }
 
-        IRInstr jmpNext;
-        jmpNext.op = IROp::Jump;
-        jmpNext.targetBlock = nextBB->id;
-        finishBlock(std::move(jmpNext));
+            BasicBlock* falseTarget = isLast ? afterAltBB : curFunc_->createBlock();
+
+            IRInstr br;
+            br.op = IROp::Branch;
+            br.src1 = cmp;
+            br.targetBlock = bodyBB->id;
+            br.falseBlock = falseTarget->id;
+            finishBlock(std::move(br));
+            curFunc_->linkBlocks(curBlock_->id, bodyBB->id);
+            curFunc_->linkBlocks(curBlock_->id, falseTarget->id);
+
+            if (!isLast) setBlock(falseTarget);
+        }
 
         setBlock(bodyBB);
         for (auto& stmt : alt->body)
@@ -1283,7 +1320,7 @@ void IRBuilder::visit(CaseStmt& s) {
         finishBlock(std::move(jmpMerge));
         curFunc_->linkBlocks(curBlock_->id, mergeBB->id);
 
-        setBlock(nextBB);
+        setBlock(afterAltBB);
     }
 
     IRInstr jmpMerge;
