@@ -112,6 +112,9 @@ bool riscvEmitStdlibCall(RiscVCodeGen& cg, DesignatorExpr& des, ArgsSelector* ar
             }
         }
         return true;
+
+    default:
+        return false;
     }
 }
 
