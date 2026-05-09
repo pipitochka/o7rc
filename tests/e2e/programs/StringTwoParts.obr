@@ -1,0 +1,5 @@
+MODULE StringTwoParts;
+IMPORT Out;
+BEGIN
+    Out.String("AB"); Out.String("CD"); Out.Ln
+END StringTwoParts.

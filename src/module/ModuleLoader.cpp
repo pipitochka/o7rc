@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 static const std::unordered_set<std::string> kBuiltins = {
-    "Out", "In", "SYSTEM"
+    "SYSTEM",
 };
 
 const std::unordered_set<std::string>& ModuleLoader::builtinModules() {

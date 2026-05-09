@@ -311,6 +311,114 @@ void RiscVIRCodeGen::emitInstr(const IRInstr& instr) {
             break;
         }
 
+        case IROp::Index1: {
+            loadValue(instr.src1, "t0");
+            loadValue(instr.src2, "t1");
+            emit_.text("add a0, t0, t1");
+            storeToSlot(instr.dst.id, "a0");
+            break;
+        }
+
+        case IROp::Load8: {
+            loadValue(instr.src1, "t0");
+            emit_.text("lbu a0, 0(t0)");
+            storeToSlot(instr.dst.id, "a0");
+            break;
+        }
+
+        case IROp::Store8: {
+            loadValue(instr.src2, "t0");
+            loadValue(instr.src1, "t1");
+            emit_.text("sb t0, 0(t1)");
+            break;
+        }
+
+        case IROp::Itof: {
+            loadValue(instr.src1, "t0");
+            emit_.text("fcvt.s.w fa0, t0");
+            emit_.text("fmv.x.w a0, fa0");
+            storeToSlot(instr.dst.id, "a0");
+            break;
+        }
+
+        case IROp::FNeg: {
+            loadValue(instr.src1, "t0");
+            emit_.text("fmv.w.x fa0, t0");
+            emit_.text("fneg.s fa1, fa0");
+            emit_.text("fmv.x.w a0, fa1");
+            storeToSlot(instr.dst.id, "a0");
+            break;
+        }
+
+        case IROp::FAdd: {
+            loadValue(instr.src1, "t0");
+            loadValue(instr.src2, "t1");
+            emit_.text("fmv.w.x fa0, t0");
+            emit_.text("fmv.w.x fa1, t1");
+            emit_.text("fadd.s fa2, fa0, fa1");
+            emit_.text("fmv.x.w a0, fa2");
+            storeToSlot(instr.dst.id, "a0");
+            break;
+        }
+        case IROp::FSub: {
+            loadValue(instr.src1, "t0");
+            loadValue(instr.src2, "t1");
+            emit_.text("fmv.w.x fa0, t0");
+            emit_.text("fmv.w.x fa1, t1");
+            emit_.text("fsub.s fa2, fa0, fa1");
+            emit_.text("fmv.x.w a0, fa2");
+            storeToSlot(instr.dst.id, "a0");
+            break;
+        }
+        case IROp::FMul: {
+            loadValue(instr.src1, "t0");
+            loadValue(instr.src2, "t1");
+            emit_.text("fmv.w.x fa0, t0");
+            emit_.text("fmv.w.x fa1, t1");
+            emit_.text("fmul.s fa2, fa0, fa1");
+            emit_.text("fmv.x.w a0, fa2");
+            storeToSlot(instr.dst.id, "a0");
+            break;
+        }
+        case IROp::FDiv: {
+            loadValue(instr.src1, "t0");
+            loadValue(instr.src2, "t1");
+            emit_.text("fmv.w.x fa0, t0");
+            emit_.text("fmv.w.x fa1, t1");
+            emit_.text("fdiv.s fa2, fa0, fa1");
+            emit_.text("fmv.x.w a0, fa2");
+            storeToSlot(instr.dst.id, "a0");
+            break;
+        }
+
+        case IROp::FEq: {
+            loadValue(instr.src1, "t0");
+            loadValue(instr.src2, "t1");
+            emit_.text("fmv.w.x fa0, t0");
+            emit_.text("fmv.w.x fa1, t1");
+            emit_.text("feq.s a0, fa0, fa1");
+            storeToSlot(instr.dst.id, "a0");
+            break;
+        }
+        case IROp::FLt: {
+            loadValue(instr.src1, "t0");
+            loadValue(instr.src2, "t1");
+            emit_.text("fmv.w.x fa0, t0");
+            emit_.text("fmv.w.x fa1, t1");
+            emit_.text("flt.s a0, fa0, fa1");
+            storeToSlot(instr.dst.id, "a0");
+            break;
+        }
+        case IROp::FLe: {
+            loadValue(instr.src1, "t0");
+            loadValue(instr.src2, "t1");
+            emit_.text("fmv.w.x fa0, t0");
+            emit_.text("fmv.w.x fa1, t1");
+            emit_.text("fle.s a0, fa0, fa1");
+            storeToSlot(instr.dst.id, "a0");
+            break;
+        }
+
         case IROp::Branch: {
             loadValue(instr.src1, "t0");
             emit_.text("bnez t0, " + blockLabel(*curFunc_, instr.targetBlock));
@@ -342,6 +450,20 @@ void RiscVIRCodeGen::emitInstr(const IRInstr& instr) {
         }
 
         case IROp::Syscall: {
+            if (instr.syscallNum == 2 && !instr.args.empty()) {
+                loadValue(instr.args[0], "t0");
+                emit_.text("fmv.w.x fa0, t0");
+                emit_.text("li a7, 2");
+                emit_.text("ecall");
+                break;
+            }
+            if (instr.syscallNum == 8 && instr.args.size() >= 2) {
+                loadValue(instr.args[0], "a0");
+                loadValue(instr.args[1], "a1");
+                emit_.text("li a7, 8");
+                emit_.text("ecall");
+                break;
+            }
             if (!instr.args.empty()) {
                 loadValue(instr.args[0], "a0");
             }

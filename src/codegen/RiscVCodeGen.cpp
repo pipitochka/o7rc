@@ -1,4 +1,7 @@
 #include "RiscVCodeGen.h"
+
+#include <runtime/RiscVStdlibAsm.h>
+
 #include <module/ModuleLoader.h>
 #include <stdexcept>
 #include <cstring>
@@ -60,7 +63,11 @@ TypeInfo* RiscVCodeGen::resolveType(TypeNode* t) {
             if (auto* lit = dynamic_cast<LiteralExpr*>(arr->length[0].get()))
                 length = static_cast<int>(lit->intValue);
         }
-        return types_.makeArray(length, resolveType(arr->elemType.get()));
+        TypeInfo* elemTi = resolveType(arr->elemType.get());
+        if (auto* en = dynamic_cast<NamedType*>(arr->elemType.get())) {
+            if (en->name == "CHAR") elemTi = types_.char8Type();
+        }
+        return types_.makeArray(length, elemTi);
     }
     if (auto* ptr = dynamic_cast<PointerType*>(t)) {
         return types_.makePointer(resolveType(ptr->baseType.get()));
@@ -294,6 +301,14 @@ void RiscVCodeGen::visit(LiteralExpr& e) {
 }
 
 void RiscVCodeGen::visit(UnaryExpr& e) {
+    if (e.op == UnaryExpr::Op::Neg && exprIsReal(*e.rhs)) {
+        e.rhs->accept(*this);
+        emit_.text("fmv.w.x fa0, a0");
+        emit_.text("fneg.s fa1, fa0");
+        emit_.text("fmv.x.w a0, fa1");
+        return;
+    }
+
     e.rhs->accept(*this); // a0 = operand
     switch (e.op) {
         case UnaryExpr::Op::Neg:
@@ -306,6 +321,80 @@ void RiscVCodeGen::visit(UnaryExpr& e) {
 }
 
 void RiscVCodeGen::visit(BinaryExpr& e) {
+    bool lr = exprIsReal(*e.lhs);
+    bool rr = exprIsReal(*e.rhs);
+    bool useFloat =
+        (lr || rr) && e.op != BinaryExpr::Op::And && e.op != BinaryExpr::Op::Or &&
+        e.op != BinaryExpr::Op::In && e.op != BinaryExpr::Op::Mod &&
+        e.op != BinaryExpr::Op::IDiv;
+
+    if (useFloat) {
+        e.lhs->accept(*this);
+        if (!lr) {
+            emit_.text("fcvt.s.w fa0, a0");
+            emit_.text("fmv.x.w t1, fa0");
+        } else {
+            emit_.text("mv t1, a0");
+        }
+        emit_.text("addi sp, sp, -4");
+        emit_.text("sw t1, 0(sp)");
+
+        e.rhs->accept(*this);
+        if (!rr) {
+            emit_.text("fcvt.s.w fa0, a0");
+            emit_.text("fmv.x.w t2, fa0");
+        } else {
+            emit_.text("mv t2, a0");
+        }
+        emit_.text("lw t1, 0(sp)");
+        emit_.text("addi sp, sp, 4");
+
+        emit_.text("fmv.w.x fa0, t1");
+        emit_.text("fmv.w.x fa1, t2");
+
+        switch (e.op) {
+            case BinaryExpr::Op::Add:
+                emit_.text("fadd.s fa2, fa0, fa1");
+                emit_.text("fmv.x.w a0, fa2");
+                return;
+            case BinaryExpr::Op::Sub:
+                emit_.text("fsub.s fa2, fa0, fa1");
+                emit_.text("fmv.x.w a0, fa2");
+                return;
+            case BinaryExpr::Op::Mul:
+                emit_.text("fmul.s fa2, fa0, fa1");
+                emit_.text("fmv.x.w a0, fa2");
+                return;
+            case BinaryExpr::Op::RDiv:
+                emit_.text("fdiv.s fa2, fa0, fa1");
+                emit_.text("fmv.x.w a0, fa2");
+                return;
+            case BinaryExpr::Op::Eq:
+                emit_.text("feq.s a0, fa0, fa1");
+                return;
+            case BinaryExpr::Op::Neq:
+                emit_.text("feq.s a0, fa0, fa1");
+                emit_.text("xori a0, a0, 1");
+                return;
+            case BinaryExpr::Op::Lt:
+                emit_.text("flt.s a0, fa0, fa1");
+                return;
+            case BinaryExpr::Op::Le:
+                emit_.text("fle.s a0, fa0, fa1");
+                return;
+            case BinaryExpr::Op::Gt:
+                emit_.text("flt.s a0, fa1, fa0");
+                return;
+            case BinaryExpr::Op::Ge:
+                emit_.text("fle.s a0, fa1, fa0");
+                return;
+            default:
+                emit_.text("fadd.s fa2, fa0, fa1");
+                emit_.text("fmv.x.w a0, fa2");
+                return;
+        }
+    }
+
     e.lhs->accept(*this);
     emit_.text("addi sp, sp, -4");
     emit_.text("sw a0, 0(sp)");
@@ -538,8 +627,19 @@ void RiscVCodeGen::emitAddress(DesignatorExpr& des) {
         } else if (auto* idx = dynamic_cast<IndexSelector*>(sel.get())) {
             emit_.text("mv t3, a0");
             idx->index[0]->accept(*this);
-            emit_.text("slli a0, a0, 2");
-            emit_.text("add a0, t3, a0");
+            int scale = (curType && curType->kind == TypeInfo::TArray && curType->elemType)
+                ? curType->elemType->size
+                : 4;
+            if (scale == 1) {
+                emit_.text("add a0, t3, a0");
+            } else if (scale == 4) {
+                emit_.text("slli a0, a0, 2");
+                emit_.text("add a0, t3, a0");
+            } else {
+                emit_.text("li t4, " + std::to_string(scale));
+                emit_.text("mul a0, a0, t4");
+                emit_.text("add a0, t3, a0");
+            }
             if (curType && curType->kind == TypeInfo::TArray)
                 curType = curType->elemType;
         } else if (dynamic_cast<DerefSelector*>(sel.get())) {
@@ -569,7 +669,90 @@ void RiscVCodeGen::emitLoad(DesignatorExpr& des) {
     }
 
     emitAddress(des);
-    emit_.text("lw a0, 0(a0)");
+    if (designatorNeedsByteMemory(des))
+        emit_.text("lbu a0, 0(a0)");
+    else
+        emit_.text("lw a0, 0(a0)");
+}
+
+TypeInfo* RiscVCodeGen::typeAfterDesignator(DesignatorExpr& des) {
+    std::string baseName = des.baseName;
+    std::string::size_type dotPos = baseName.find('.');
+    std::string lookupName = (dotPos != std::string::npos)
+        ? baseName.substr(dotPos + 1) : baseName;
+
+    auto* sym = sym_.lookup(lookupName);
+    if (!sym) sym = sym_.lookup(baseName);
+
+    std::string implicitField;
+    if (!sym && dotPos != std::string::npos) {
+        std::string firstPart = baseName.substr(0, dotPos);
+        sym = sym_.lookup(firstPart);
+        if (sym) implicitField = baseName.substr(dotPos + 1);
+    }
+
+    if (!sym || sym->kind == Symbol::Const) return nullptr;
+
+    TypeInfo* curType = sym->type;
+
+    if (!implicitField.empty()) {
+        if (curType && curType->kind == TypeInfo::TPointer)
+            curType = curType->pointeeType;
+        if (curType && curType->kind == TypeInfo::TRecord) {
+            auto* f = curType->findField(implicitField);
+            if (f) curType = f->type;
+        }
+    }
+
+    for (auto& sel : des.selectors) {
+        if (dynamic_cast<ArgsSelector*>(sel.get())) break;
+
+        if (auto* field = dynamic_cast<FieldSelector*>(sel.get())) {
+            if (curType && curType->kind == TypeInfo::TPointer)
+                curType = curType->pointeeType;
+            if (curType && curType->kind == TypeInfo::TRecord) {
+                auto* f = curType->findField(field->name);
+                if (f) curType = f->type;
+            }
+        } else if (dynamic_cast<IndexSelector*>(sel.get())) {
+            if (curType && curType->kind == TypeInfo::TArray)
+                curType = curType->elemType;
+        } else if (dynamic_cast<DerefSelector*>(sel.get())) {
+            if (curType && curType->kind == TypeInfo::TPointer)
+                curType = curType->pointeeType;
+        }
+    }
+
+    return curType;
+}
+
+bool RiscVCodeGen::exprIsReal(Expr& e) {
+    if (auto* lit = dynamic_cast<LiteralExpr*>(&e))
+        return lit->kind == LiteralExpr::Kind::Real;
+    if (auto* bin = dynamic_cast<BinaryExpr*>(&e))
+        return exprIsReal(*bin->lhs) || exprIsReal(*bin->rhs);
+    if (auto* un = dynamic_cast<UnaryExpr*>(&e)) {
+        if (un->op == UnaryExpr::Op::Neg)
+            return exprIsReal(*un->rhs);
+        return false;
+    }
+    if (auto* des = dynamic_cast<DesignatorExpr*>(&e)) {
+        TypeInfo* t = typeAfterDesignator(*des);
+        return t && t->kind == TypeInfo::TReal;
+    }
+    return false;
+}
+
+bool RiscVCodeGen::designatorNeedsByteMemory(DesignatorExpr& des) {
+    TypeInfo* t = typeAfterDesignator(des);
+    if (!t || t->kind != TypeInfo::TChar || t->size != 1) return false;
+    if (des.selectors.empty()) return false;
+    Selector* last = des.selectors.back().get();
+    if (dynamic_cast<ArgsSelector*>(last)) {
+        if (des.selectors.size() < 2) return false;
+        last = des.selectors[des.selectors.size() - 2].get();
+    }
+    return dynamic_cast<IndexSelector*>(last) != nullptr;
 }
 
 // ============================================================
@@ -591,59 +774,9 @@ bool RiscVCodeGen::tryEmitBuiltinCall(DesignatorExpr& des) {
         proc = name;
     }
 
-    // Out.Int(value, width)  — печать целого числа
-    if (module == "Out" && proc == "Int") {
-        if (!args->args.empty()) {
-            args->args[0]->accept(*this);
-            emit_.text("li a7, 1");
-            emit_.text("ecall");
-        }
-        return true;
-    }
-
-    // Out.Ln  — перевод строки
-    if (module == "Out" && proc == "Ln") {
-        emit_.text("li a0, 10"); // '\n'
-        emit_.text("li a7, 11");
-        emit_.text("ecall");
-        return true;
-    }
-
-    // Out.String(s) / Out.Char(ch)
-    if (module == "Out" && proc == "String") {
-        if (!args->args.empty()) {
-            args->args[0]->accept(*this);
-            emit_.text("li a7, 4");
-            emit_.text("ecall");
-        }
-        return true;
-    }
-
-    if (module == "Out" && proc == "Char") {
-        if (!args->args.empty()) {
-            args->args[0]->accept(*this);
-            emit_.text("li a7, 11");
-            emit_.text("ecall");
-        }
-        return true;
-    }
-
-    if (module == "In" && proc == "Open") {
-        return true;
-    }
-
-    if (module == "In" && proc == "Int") {
-        emit_.text("li a7, 5");
-        emit_.text("ecall");
-        // a0 = считанное значение, нужно сохранить в аргумент
-        if (!args->args.empty()) {
-            if (auto* d = dynamic_cast<DesignatorExpr*>(args->args[0].get())) {
-                emit_.text("mv t0, a0");
-                emitAddress(*d);
-                emit_.text("sw t0, 0(a0)");
-            }
-        }
-        return true;
+    if (!module.empty()) {
+        if (o7rc::runtime::riscvEmitStdlibCall(*this, des, args))
+            return true;
     }
 
     // INC(x) / INC(x, n)
@@ -778,33 +911,17 @@ void RiscVCodeGen::visit(AssignStmt& s) {
     emitAddress(*s.lhs);            // a0 = address of lhs
     emit_.text("lw t0, 0(sp)");
     emit_.text("addi sp, sp, 4");
-    emit_.text("sw t0, 0(a0)");     // *lhs = value
+    if (designatorNeedsByteMemory(*s.lhs))
+        emit_.text("sb t0, 0(a0)");
+    else
+        emit_.text("sw t0, 0(a0)");
 }
 
 void RiscVCodeGen::visit(CallStmt& s) {
     auto& des = *s.designator;
 
-    // Обработка встроенных процедур без скобок (например Out.Ln)
-    std::string name = des.baseName;
-    std::string::size_type dotPos = name.find('.');
-    std::string module, proc;
-    if (dotPos != std::string::npos) {
-        module = name.substr(0, dotPos);
-        proc = name.substr(dotPos + 1);
-    } else {
-        proc = name;
-    }
-
-    if (module == "Out" && proc == "Ln") {
-        emit_.text("li a0, 10");
-        emit_.text("li a7, 11");
-        emit_.text("ecall");
+    if (o7rc::runtime::riscvEmitStdlibStmt(*this, des))
         return;
-    }
-
-    if (module == "In" && proc == "Open") {
-        return;
-    }
 
     des.accept(*this);
 }

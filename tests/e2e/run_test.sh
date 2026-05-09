@@ -58,6 +58,11 @@ while [ $i -lt ${#EXTRA_ARGS[@]} ]; do
                 [ -f "$mf" ] || continue
                 mbase=$(basename "$mf")
                 mname="${mbase%.*}"
+                # Не подменяем системные In/Out у OBNC заглушками из stdlib —
+                # для o7rc интерфейсы задаются stdlib/In.obr и stdlib/Out.obr (-M stdlib).
+                if [ "$mname" = "In" ] || [ "$mname" = "Out" ]; then
+                    continue
+                fi
                 cp "$mf" "${OBNC_DIR}/${mname}.obn" 2>/dev/null || true
             done
         fi

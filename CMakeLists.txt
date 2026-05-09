@@ -151,11 +151,14 @@ if(USE_CODEGEN)
             ${SRC_DIR}/codegen/TypeInfo.cpp
             ${SRC_DIR}/codegen/SymbolTable.cpp
             ${SRC_DIR}/codegen/RiscVCodeGen.cpp
+            ${SRC_DIR}/runtime/RiscVStdlibAsm.cpp
     )
     target_compile_definitions(core PUBLIC USE_CODEGEN=1)
 endif()
 
 target_sources(core PRIVATE
+        ${SRC_DIR}/runtime/StdlibProc.cpp
+        ${SRC_DIR}/runtime/IRStdlib.cpp
         ${SRC_DIR}/module/ModuleLoader.cpp
         ${SRC_DIR}/sema/Sema.cpp
         ${SRC_DIR}/ir/IRBuilder.cpp

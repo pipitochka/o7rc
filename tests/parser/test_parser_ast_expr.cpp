@@ -59,6 +59,22 @@ TEST_P(ParserExprTest, ParsesRealLiteral) {
     EXPECT_DOUBLE_EQ(lit->realValue, 2.718);
 }
 
+TEST_P(ParserExprTest, ParsesHighPrecisionRealLiteralAsDouble) {
+    auto mod = parseModule("x := 1.2345678901234567");
+    auto* lit = dynamic_cast<LiteralExpr*>(getFirstAssignmentExpr(mod.get()));
+    ASSERT_NE(lit, nullptr);
+    EXPECT_EQ(lit->kind, LiteralExpr::Kind::Real);
+    EXPECT_DOUBLE_EQ(lit->realValue, 1.2345678901234567);
+}
+
+TEST_P(ParserExprTest, ParsesRealLiteralScientificNotation) {
+    auto mod = parseModule("x := 3.141592653589793e0");
+    auto* lit = dynamic_cast<LiteralExpr*>(getFirstAssignmentExpr(mod.get()));
+    ASSERT_NE(lit, nullptr);
+    EXPECT_EQ(lit->kind, LiteralExpr::Kind::Real);
+    EXPECT_DOUBLE_EQ(lit->realValue, 3.141592653589793);
+}
+
 TEST_P(ParserExprTest, ParsesStringLiteral) {
     auto mod = parseModule("x := \"hello\"");
     auto* lit = dynamic_cast<LiteralExpr*>(getFirstAssignmentExpr(mod.get()));

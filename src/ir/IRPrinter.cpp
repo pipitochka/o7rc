@@ -16,6 +16,18 @@ std::string IRPrinter::opName(IROp op) {
         case IROp::Div:  return "div";
         case IROp::Mod:  return "mod";
         case IROp::Neg:  return "neg";
+        case IROp::Itof: return "itof";
+        case IROp::FAdd: return "fadd";
+        case IROp::FSub: return "fsub";
+        case IROp::FMul: return "fmul";
+        case IROp::FDiv: return "fdiv";
+        case IROp::FNeg: return "fneg";
+        case IROp::FEq:  return "feq";
+        case IROp::FLt:  return "flt";
+        case IROp::FLe:  return "fle";
+        case IROp::Index1: return "index1";
+        case IROp::Load8: return "load8";
+        case IROp::Store8: return "store8";
         case IROp::Eq:   return "eq";
         case IROp::Neq:  return "neq";
         case IROp::Lt:   return "lt";
@@ -85,10 +97,21 @@ std::string IRPrinter::formatInstr(const IRInstr& instr) {
         case IROp::Add: case IROp::Sub: case IROp::Mul: case IROp::Div: case IROp::Mod:
         case IROp::Eq: case IROp::Neq: case IROp::Lt: case IROp::Le: case IROp::Gt: case IROp::Ge:
         case IROp::And: case IROp::Or:
+        case IROp::FAdd: case IROp::FSub: case IROp::FMul: case IROp::FDiv:
+        case IROp::FEq: case IROp::FLt: case IROp::FLe:
+        case IROp::Index1:
             s = instr.dst.str() + " = " + opName(instr.op) + " " + instr.src1.str() + ", " + instr.src2.str();
             break;
 
-        case IROp::Neg: case IROp::Not:
+        case IROp::Load8:
+            s = instr.dst.str() + " = load8 [" + instr.src1.str() + "]";
+            break;
+
+        case IROp::Store8:
+            s = "store8 [" + instr.src1.str() + "], " + instr.src2.str();
+            break;
+
+        case IROp::Neg: case IROp::Not: case IROp::Itof: case IROp::FNeg:
             s = instr.dst.str() + " = " + opName(instr.op) + " " + instr.src1.str();
             break;
 

@@ -11,6 +11,7 @@
 - [Сборка](#сборка)
 - [Запуск](#запуск)
 - [Модульная система](#модульная-система)
+- [Добавление runtime-модулей stdlib](#добавление-runtime-модулей-stdlib)
 - [Семантический анализ](#семантический-анализ)
 - [IR и оптимизации](#ir-и-оптимизации)
 - [Написание своих оптимизаций](#написание-своих-оптимизаций)
@@ -84,8 +85,9 @@
 | **Sema** | Семантический анализ: проверка областей видимости, типов, арности |
 | **IR / CFG** | Трёхадресный код в базовых блоках с графом потока управления |
 | **PassManager** | Управление проходами оптимизации с fluent API |
-| **Кодогенерация (прямая)** | Генерация RISC-V ассемблера напрямую из AST |
-| **Кодогенерация (IR)** | Генерация RISC-V ассемблера из оптимизированного IR |
+| **Кодогенерация (прямая)** | Генерация RISC-V ассемблера напрямую из AST (`RiscVCodeGen`) |
+| **Кодогенерация (IR)** | Генерация RISC-V ассемблера из оптимизированного IR (`RiscVIRCodeGen`) |
+| **Runtime (Out / In)** | Каталог процедур и генерация syscall’ов RARS: `src/runtime/` (`StdlibProc`, `RiscVStdlibAsm`, `IRStdlib`) |
 | **E2E-тесты** | Автоматическое сравнение вывода o7rc+RARS с эталонным компилятором OBNC |
 
 ---
@@ -170,7 +172,7 @@ cmake --build . --parallel
 | `USE_BISON` | `ON` | Использовать Bison-парсер |
 | `USE_HAND_TOKENIZER` | `OFF` | Использовать рукописный лексер |
 | `USE_HAND_PARSER` | `OFF` | Использовать рукописный парсер |
-| `USE_CODEGEN` | `ON` | Включить прямую кодогенерацию RISC-V (AST → asm) |
+| `USE_CODEGEN` | `ON` | Включить прямую кодогенерацию RISC-V (AST → asm) и файл `runtime/RiscVStdlibAsm.cpp` |
 | `USE_RARS` | `ON` | Скачать RARS/OBNC и включить e2e-тесты |
 | `USE_DEBUG` | `OFF` | Отладочный вывод токенов |
 
@@ -194,20 +196,19 @@ cmake .. -DUSE_HAND_TOKENIZER=ON -DUSE_HAND_PARSER=ON
 
 ## Запуск
 
+Типичная программа с `IMPORT Out`, `IMPORT In` или `IMPORT Math` **обязана** видеть соответствующие `.obr` на пути модулей (`-M`), иначе загрузка импортов завершится ошибкой. В репозитории это каталог **`stdlib/`**.
+
 ```bash
-# Компиляция через прямую кодогенерацию (AST → asm)
-./o7rc input.obr -o output.asm
-
-# Компиляция через IR-пайплайн
-./o7rc input.obr -o output.asm --ir
-
-# IR-пайплайн с оптимизациями
-./o7rc input.obr -o output.asm --opt
-
-# Компиляция с импортом модулей из stdlib/
+# Прямая кодогенерация (AST → asm), с модулями из stdlib/
 ./o7rc input.obr -o output.asm -M stdlib
 
-# Запуск в RARS
+# Тот же исходник через IR-пайплайн
+./o7rc input.obr -o output.asm -M stdlib --ir
+
+# IR + оптимизации
+./o7rc input.obr -o output.asm -M stdlib --opt
+
+# Запуск в RARS (путь к jar зависит от сборки, см. build/)
 java -jar rars.jar nc sm output.asm
 ```
 
@@ -241,7 +242,7 @@ java -jar rars.jar nc sm output.asm
 ### Архитектура
 
 1. **`ModuleLoader`** — ищет `.obr`/`.obn` файлы по списку каталогов (`-M` / `--module-path`), парсит их тем же фронтендом, что и основной модуль, кэширует AST и рекурсивно загружает транзитивные импорты.
-2. Встроенные модули (`Out`, `In`, `SYSTEM`) не загружаются с диска — их процедуры обрабатываются компилятором напрямую.
+2. Модуль **`SYSTEM`** не загружается с диска — его процедуры обрабатываются компилятором напрямую. Модули **`Out`** и **`In`** загружаются как обычные: в репозитории заданы **заглушки** `stdlib/Out.obr` и `stdlib/In.obr` (сигнатуры экспорта, пустые тела). Их **реализация для RISC-V/RARS** сосредоточена в каталоге `src/runtime/` (`StdlibProc` — каталог имён и классификация; `RiscVStdlibAsm`, `IRStdlib` — генерация asm и IR), а не размазана по всему кодогенератору. Для программ с `IMPORT Out` / `IMPORT In` нужен каталог интерфейсов, например `-M stdlib`.
 3. При кодогенерации (как прямой, так и IR) экспортированные объявления импортированных модулей обрабатываются первыми, после чего генерируется код основного модуля.
 
 ### Экспорт символов
@@ -308,7 +309,9 @@ java -jar rars.jar nc sm out.asm
 
 ### Стандартная библиотека
 
-В каталоге `stdlib/` поставляется модуль `Math` с экспортированными функциями:
+В каталоге `stdlib/` поставляются модуль **`Math`** и интерфейсы **`Out`** и **`In`**.
+
+**`Math`** — экспортированные функции:
 
 | Процедура | Описание |
 |---|---|
@@ -320,7 +323,64 @@ java -jar rars.jar nc sm out.asm
 | `GCD(a, b)` | Наибольший общий делитель |
 | `Factorial(n)` | Факториал |
 
-Каталог `stdlib/` автоматически подключается при E2E-тестировании.
+**`Out.obr`** — только интерфейс (пустые тела). Реализация для RARS — в **`src/runtime/`** (`RiscVStdlibAsm` при прямой кодогенерации, `IRStdlib` при `--ir`).
+
+| Процедура | Описание |
+|---|---|
+| `Int(x, w: INTEGER)` | Печать целого (`x`; ширина `w` пока не используется) |
+| `Ln` | Перевод строки |
+| `String(s: ARRAY OF CHAR)` | Печать ASCIIZ-строки |
+| `Char(ch: CHAR)` | Печать одного символа |
+| `Real(x: REAL)` | Печать вещественного (RARS syscall 2) |
+
+**`In.obr`** — только интерфейс; машинный код там же, в **`src/runtime/`**.
+
+| Процедура | Описание |
+|---|---|
+| `Open` | Инициализация ввода (no-op) |
+| `Int(VAR x: INTEGER)` | Чтение целого с stdin |
+| `Char(VAR ch: CHAR)` | Чтение одного символа |
+| `Line(VAR s: ARRAY OF CHAR)` | Чтение строки в массив символов |
+
+Для строк и `ARRAY n OF CHAR` элементы считаются **однобайтовыми** (`CHAR` размером 1 в массиве), что согласовано с `In.Line`, `Out.String` и окружением RARS.
+
+Каталог `stdlib/` автоматически подключается при E2E-тестировании (`-M stdlib`). В скрипте `tests/e2e/run_test.sh` файлы **`Out.obr`** и **`In.obr`** **не копируются** в сборку OBNC: эталонный вывод строится системными модулями **Out** и **In** из OBNC, а `o7rc` использует свою реализацию тех же вызовов.
+
+### Добавление runtime-модулей stdlib
+
+Наряду с обычными модулями вроде **`Math`** (полный Oberon-код компилируется в ассемблер как часть программы), можно завести **runtime-модуль**: в `stdlib/` лежит только **контракт** (экспортируемые сигнатуры с пустыми телами), а **семантика на машине** задаётся вручную в C++ — через syscall’ы RARS, специальные последовательности инструкций и т.п. Так сделаны **`Out`** и **`In`**.
+
+**Зачем так:** в языке нет прямого доступа к `ecall`/системным вызовам симулятора; проще и предсказуемее один раз описать отображение «вызов Oberon → asm/IR», чем пытаться выразить это чистым Oberon в заглушке.
+
+**Чем отличается от `Math`:**
+
+| | Обычный модуль (`Math`) | Runtime-модуль (`Out`, `In`, ваш новый) |
+|---|---|---|
+| Файл в `stdlib/` | Полные процедуры с телами | Только объявления `PROCEDURE …*; BEGIN END` |
+| Код в `.asm` | Генерируется из AST процедур | Вызовы `ИмяМодуля.Proc` перехватываются до `jal proc_…` |
+| Где логика | В `.obr` | В `src/runtime/` (`RiscVStdlibAsm`, `IRStdlib`) |
+
+**Цепочка вызова:** при разборе выражения или оператора с квалификатором `Модуль.процедура` сначала вызываются `riscvEmitStdlibCall` / `irEmitStdlibCall` (есть скобки с аргументами) или `riscvEmitStdlibStmt` / `irEmitStdlibStmt` (редкий случай оператора **без** скобок, как `Out.Ln` или `In.Open`). Если `classifyStdlibProc` узнаёт пару модуль/процедура — генерируется нативный код; иначе управление уходит к обычным процедурам из AST (в т.ч. к пустым заглушкам из `.obr`).
+
+#### Как добавить новый runtime-модуль
+
+1. **`stdlib/Имя.obr`** — модуль с нужными `PROCEDURE …*;` и пустыми `BEGIN END` (как у `Out`/`In`). Имена модуля и процедур должны совпасть с тем, что вы заведёте в runtime.
+
+2. **`ModuleLoader`** (`src/module/ModuleLoader.cpp`) — модуль **не** должен попадать в `kBuiltins` (там только `SYSTEM`). Тогда он загружается с диска как любой другой импорт, и Sema видит `IMPORT`.
+
+3. **`src/runtime/StdlibProc.h`** — добавьте константы в перечисление `StdlibProcKind` (например `MyMod_Foo`).
+
+4. **`src/runtime/StdlibProc.cpp`** — в `classifyStdlibProc` сопоставьте `module == "MyMod"` и `proc == "Foo"` с новым видом; в `stdlibQualifiedProcNames()` добавьте строку `"MyMod.Foo"` (и все остальные экспортируемые вызовы, которые Sema должен считать «известными» без разбора тела).
+
+5. **`src/runtime/RiscVStdlibAsm.cpp`** — ветка `switch` для каждого `StdlibProcKind`: генерируйте инструкции через `cg.emit_`, выражения — `args->args[i]->accept(cg)` и т.д. Класс `RiscVCodeGen` объявляет эти функции как `friend`, чтобы был доступ к `emit_`, `emitAddress`, `typeAfterDesignator`. Сборка: только при **`USE_CODEGEN=ON`**.
+
+6. **`src/runtime/IRStdlib.cpp`** — те же процедуры для IR-пайплайна: `Syscall`, `Store`, адреса через `emitAddress` / `emitExpr`. Нужен всегда, если используется `--ir`.
+
+7. **Оператор без скобок** — если в языке процедура допускается как `MyMod.Bar` без `()` (как `Out.Ln`), добавьте обработку в `riscvEmitStdlibStmt` и `irEmitStdlibStmt`.
+
+8. **E2E** — если у OBNC уже есть одноимённый системный модуль и вы не хотите подменять его пустой заглушкой, в `tests/e2e/run_test.sh` при копировании из `-M` добавьте исключение по имени модуля (по аналогии с `In` и `Out`).
+
+**Ограничения:** нет плагинов или JSON-описания — каждый новый вызов добавляется в enum и в два `switch`. Префикс в исходнике должен быть **реальным** именем модуля (`MyMod.Proc`), не псевдонимом из `IMPORT M := MyMod`. Функции с результатом как часть runtime-модуля сейчас не развивались (в `Out`/`In` — процедуры).
 
 ### Ограничения модульной системы
 
@@ -348,7 +408,7 @@ java -jar rars.jar nc sm out.asm
 | Неопределённый тип | `VAR x: Foo` без `TYPE Foo` |
 | Неопределённый модуль | `Foo.Bar` без `IMPORT Foo` |
 
-Встроенные процедуры (`INC`, `DEC`, `ABS`, `Out.Int`, `Out.Ln`, `In.Int` и т.д.) и типы (`INTEGER`, `BOOLEAN`, `REAL`, `CHAR`) известны анализатору. Для вызовов вида `ИмяМодуля.идентификатор` проверяется, что **первый компонент** — объявленный импорт; полная проверка того, что целевой символ существует в том модуле (например, что у `Math` действительно есть `Abs`), **не доведена** — часть ошибок вылезет уже на этапе кодогенерации.
+Список известных **неквалифицированных** встроек (`INC`, `DEC`, `ABS`, …) задан в `Sema`. Имена модулей **`Out.*`** и **`In.*`** подмешиваются из **`runtime/StdlibProc`** (`stdlibQualifiedProcNames`), чтобы не дублировать строки. Типы `INTEGER`, `BOOLEAN`, `REAL`, `CHAR` и др. тоже известны анализатору. Для вызовов вида `ИмяМодуля.идентификатор` проверяется, что **первый компонент** — объявленный импорт; полная проверка того, что целевой символ существует в том модуле (например, что у `Math` действительно есть `Abs`), **не доведена** — часть ошибок вылезет уже на этапе кодогенерации.
 
 Отключение: `--no-sema`.
 
@@ -546,7 +606,9 @@ struct IRValue {
 | Память | `Alloca` | `dst = alloca "name" (N bytes)` | Выделить слот на стеке |
 | | `Load` | `dst = load [src1]` | Загрузить значение по адресу |
 | | `Store` | `store [src1], src2` | Записать значение по адресу |
-| | `Index` | `dst = index src1, src2` | Адрес элемента массива |
+| | `Index` | `dst = index src1, src2` | Адрес элемента массива (шаг 4 байта) |
+| | `Index1` | `dst = index1 src1, src2` | Адрес элемента `ARRAY … OF CHAR` (шаг 1 байт) |
+| | `Load8` / `Store8` | `dst = load [addr]` / `store [addr], val` | Один байт (CHAR в массиве) |
 | | `AddrGlobal` | `dst = addr_global "name"` | Адрес глобальной переменной |
 | | `AddrLocal` | `dst = addr_local "name"` | Адрес локальной переменной |
 | Управление | `Branch` | `br src1, bbT, bbF` | Условный переход |
@@ -736,7 +798,7 @@ ctest -E e2e --output-on-failure
 |---|---|---|
 | Лексер | `tests/tokenizer/test_tokenizer_*.cpp` | Токенизация, грамматика, сниппеты |
 | Парсер | `tests/parser/test_parser_*.cpp` | Структура AST, выражения, типы, операторы |
-| Sema | `tests/sema/test_sema.cpp` | 27 тестов: позитивные + негативные |
+| Sema | `tests/sema/test_sema.cpp` | 29 тестовых сценариев (параметризация по фронтенду) |
 | IR Builder | `tests/ir/test_ir_builder.cpp` | Построение IR: модули, переменные, CFG |
 | IR Passes | `tests/ir/test_ir_passes.cpp` | ConstantFolding, CopyPropagation, DCE, PassManager |
 | IR Memory | `tests/ir/test_ir_memory.cpp` | RECORD, POINTER TO, NEW, доступ к полям, вложенные записи |
@@ -752,12 +814,12 @@ cd build
 ctest -L e2e --output-on-failure
 ```
 
-E2E-тесты регистрируются для каждой включённой комбинации фронтенда в двух вариантах — прямая кодогенерация и IR-пайплайн (например, `e2e_Factorial_flex_bison`, `e2e_Factorial_flex_bison_ir`). Если в сборке доступны все четыре пары (flex+bison, flex+hand, hand+bison, hand+hand), получается **8** e2e-прогонов на каждую из 42 программ (всего **336** тестов с меткой `e2e`). Каждый тест:
+E2E-тесты регистрируются для каждой включённой комбинации фронтенда в двух вариантах — прямая кодогенерация и IR-пайплайн (например, `e2e_Factorial_flex_bison`, `e2e_Factorial_flex_bison_ir`). Если в сборке доступны все четыре пары (flex+bison, flex+hand, hand+bison, hand+hand), получается **8** e2e-прогонов на каждую из **45** программ (всего **360** тестов с меткой `e2e`). Каждый тест:
 1. Компилирует `.obr` через OBNC → эталонный вывод
 2. Компилирует `.obr` → `.asm` через `o7rc` (с `-M stdlib`) → запускает в RARS → фактический вывод
 3. Сравнивает выводы
 
-**42 тестовые программы** в `tests/e2e/programs/`:
+**45 тестовых программ** в `tests/e2e/programs/`:
 
 | Категория | Программы |
 |---|---|
@@ -769,10 +831,11 @@ E2E-тесты регистрируются для каждой включённ
 | Записи/указатели | `Records`, `RecordProc`, `LinkedList` |
 | Встроенные | `IncDec`, `AbsOdd`, `DivMod` |
 | Алгоритмы | `GCD`, `Power`, `Primes`, `SumDigits`, `Collatz` |
-| С входными данными | `ReadSum`, `ReadMax`, `ReadFact`, `ReadGCD`, `ReadPower`, `ReadArray`, `ReadClassify` |
+| Строки | `StringHello`, `StringTwoParts` (`Out.String`, литералы) |
+| С входными данными | `ReadSum`, `ReadMax`, `ReadFact`, `ReadGCD`, `ReadPower`, `ReadArray`, `ReadClassify`, `ReadLineEcho` (`In.Line`; см. `.in`) |
 | Модули | `UseMath` (импорт `Math`) |
 
-**Тесты с входными данными** — для программ, использующих `In.Int`, рядом с `.obr` файлом лежит `.in` файл с входными данными. Скрипт `run_test.sh` автоматически подаёт его на stdin как OBNC, так и RARS.
+**Тесты с входными данными** — рядом с `.obr` лежит `.in` с числами или текстом для stdin. Скрипт `run_test.sh` нормализует содержимое и подаёт его и OBNC, и RARS (используется для `In.Int`, `ReadLineEcho` с `In.Line` и т.п.).
 
 ### Все тесты
 
@@ -822,6 +885,10 @@ o7rc/
 │   │   └── impl/
 │   │       ├── bison/                   # Bison-парсер (BisonParser, oberon.y)
 │   │       └── hand/                    # Рукописный парсер (HandParser)
+│   ├── runtime/                         # Out/In под RARS (не Oberon-текст)
+│   │   ├── StdlibProc.{h,cpp}           # Квалифицированные имена для Sema; classifyStdlibProc
+│   │   ├── RiscVStdlibAsm.{h,cpp}       # AST → asm syscalls (только при USE_CODEGEN)
+│   │   └── IRStdlib.{h,cpp}             # AST → IR syscall (всегда в core)
 │   ├── module/                          # Модульная система
 │   │   ├── ModuleLoader.h              # Интерфейс загрузчика модулей
 │   │   └── ModuleLoader.cpp            # Поиск, парсинг, кэширование модулей
@@ -833,7 +900,7 @@ o7rc/
 │   │   └── ast/                         # AST-узлы (Expr, Stmt, Type, Decl, Module)
 │   ├── codegen/                         # Прямая кодогенерация AST → RISC-V
 │   │   ├── ICodeGen.h
-│   │   ├── RiscVCodeGen.cpp
+│   │   ├── RiscVCodeGen.{h,cpp}         # AST → asm; вызовы Out/In делегируются в runtime/
 │   │   ├── Emitter.cpp
 │   │   ├── SymbolTable.cpp
 │   │   └── TypeInfo.cpp
@@ -842,7 +909,7 @@ o7rc/
 │       ├── Instruction.h                # IROp, IRInstr
 │       ├── BasicBlock.h                 # Базовые блоки CFG
 │       ├── Function.h                   # IRFunction, IRModule, IRGlobal
-│       ├── IRBuilder.{h,cpp}            # AST → IR
+│       ├── IRBuilder.{h,cpp}            # AST → IR; Out/In через runtime/IRStdlib
 │       ├── IRPrinter.{h,cpp}            # Текстовый дамп IR
 │       ├── IRDotExporter.{h,cpp}        # Экспорт CFG в Graphviz DOT
 │       ├── PassManager.{h,cpp}          # Менеджер оптимизационных проходов
@@ -853,7 +920,9 @@ o7rc/
 │           ├── CopyPropagation.{h,cpp}  # Распространение копий
 │           └── DeadCodeElim.{h,cpp}     # Удаление мёртвого кода
 ├── stdlib/                              # Стандартная библиотека модулей
-│   └── Math.obr                         # Math (Abs, Min, Max, Power, GCD, ...)
+│   ├── Math.obr                         # Math (Abs, Min, Max, Power, GCD, ...)
+│   ├── Out.obr                          # Интерфейс Out (заглушка; codegen даёт реализацию)
+│   └── In.obr                           # Интерфейс In (заглушка; codegen даёт реализацию)
 ├── tests/
 │   ├── basic.cpp                        # Базовые тесты
 │   ├── test_factory.h                   # Фабрика для параметризованных тестов
@@ -863,7 +932,7 @@ o7rc/
 │   ├── ir/                              # Тесты IR, оптимизаций и памяти
 │   └── e2e/
 │       ├── run_test.sh                  # Скрипт запуска E2E-теста
-│       └── programs/                    # 42 тестовые .obr программы (+ .in файлы)
+│       └── programs/                    # 45 тестовых .obr (+ .in где нужен stdin)
 ├── .github/workflows/ci.yml            # GitHub Actions CI
 ├── Dockerfile
 ├── CMakeLists.txt
@@ -967,13 +1036,13 @@ ecall           # a0 ← адрес выделенного блока
 | Массивы (`ARRAY N OF T`) | Индексация, `LEN`, вложенные массивы |
 | Записи (`RECORD`) | Объявление типов, доступ к полям, размещение на стеке/в .data |
 | Указатели (`POINTER TO`) | `NEW`, разыменование, авто-разыменование, `NIL` |
-| Строковые литералы | Передача в `Out.String` |
+| Строковые литералы | Аргументы `Out.String`; несколько вызовов подряд |
 | Процедуры | Рекурсия, параметры, `VAR`-параметры, возвращаемые значения |
 | Управляющие конструкции | `IF`/`ELSIF`/`ELSE`, `WHILE`, `REPEAT`, `FOR`, `CASE` |
 | Встроенные процедуры | `INC`, `DEC`, `ABS`, `ODD`, `ORD`, `CHR`, `LEN`, `NEW` |
-| I/O | `Out.Int`, `Out.Ln`, `Out.String`, `Out.Char`, `In.Int`, `In.Open` |
+| I/O | `Out.Int`, `Out.Ln`, `Out.String`, `Out.Char`, `Out.Real`; `In.Open`, `In.Int`, `In.Char`, `In.Line` (интерфейсы `stdlib/Out.obr`, `stdlib/In.obr` + `-M`) |
 | Импорт модулей | `IMPORT M`, квалифицированный доступ `M.x`, экспорт `*`, поиск по `-M` путям |
-| Стандартная библиотека | `Math` (Abs, Min, Max, Clamp, Power, GCD, Factorial) |
+| Стандартная библиотека | `Math` в `stdlib/`; интерфейсы `Out`, `In` в `stdlib/`, реализация syscall’ов в `src/runtime/` |
 
 ---
 

@@ -33,6 +33,11 @@ TypeInfo* TypeRegistry::charType() {
     return char_;
 }
 
+TypeInfo* TypeRegistry::char8Type() {
+    if (!char8_) { char8_ = alloc({TypeInfo::TChar, 1}); }
+    return char8_;
+}
+
 TypeInfo* TypeRegistry::setType() {
     if (!set_) { set_ = alloc({TypeInfo::TSet, 4}); }
     return set_;

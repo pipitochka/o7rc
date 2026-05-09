@@ -7,6 +7,15 @@
 #include <unordered_map>
 #include <cstring>
 
+class DesignatorExpr;
+class ArgsSelector;
+class IRBuilder;
+
+namespace o7rc::runtime {
+bool irEmitStdlibCall(IRBuilder&, DesignatorExpr&, ArgsSelector*);
+bool irEmitStdlibStmt(IRBuilder&, DesignatorExpr&);
+}
+
 struct ModuleInfo;
 
 class IRBuilder : public IVisitor {
@@ -58,6 +67,9 @@ public:
     void visit(CaseLabel&) override;
 
 private:
+    friend bool o7rc::runtime::irEmitStdlibCall(IRBuilder&, DesignatorExpr&, ArgsSelector*);
+    friend bool o7rc::runtime::irEmitStdlibStmt(IRBuilder&, DesignatorExpr&);
+
     IRModule module_;
     IRFunction* curFunc_ = nullptr;
     BasicBlock* curBlock_ = nullptr;
@@ -84,6 +96,8 @@ private:
         bool isVarParam = false;
         std::string globalLabel;
         int arrayLen = 0;
+        /// Шаг индекса для массива (1 для ARRAY OF CHAR, иначе 4).
+        int elemSize = 4;
         std::string typeName;
     };
     std::vector<std::unordered_map<std::string, VarInfo>> scopes_;
@@ -99,11 +113,16 @@ private:
     IRValue emitLoad(DesignatorExpr& des);
     bool tryEmitBuiltin(DesignatorExpr& des);
 
+    bool exprIsReal(Expr& e);
+    IRValue emitIntToRealBits(IRValue intVal);
+    bool designatorNeedsByteMemory(DesignatorExpr& des);
+
     void setBlock(BasicBlock* bb);
     void finishBlock(IRInstr terminator);
 
     int typeSize(TypeNode* t);
     int arrayLength(TypeNode* t);
+    int arrayElemByteStride(TypeNode* t);
     std::string resolveTypeName(TypeNode* t);
     void registerTypeLayout(const std::string& name, TypeNode* t);
 };

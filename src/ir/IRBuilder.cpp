@@ -1,4 +1,6 @@
 #include "IRBuilder.h"
+
+#include <runtime/IRStdlib.h>
 #include <module/ModuleLoader.h>
 #include <stdexcept>
 
@@ -95,6 +97,9 @@ int IRBuilder::typeSize(TypeNode* t) {
     }
     if (auto* arr = dynamic_cast<ArrayType*>(t)) {
         int len = arrayLength(t);
+        int stride = arrayElemByteStride(t);
+        if (stride == 1 && dynamic_cast<NamedType*>(arr->elemType.get()))
+            return len * stride;
         return len * typeSize(arr->elemType.get());
     }
     if (auto* rec = dynamic_cast<RecordType*>(t)) {
@@ -154,6 +159,15 @@ int IRBuilder::arrayLength(TypeNode* t) {
         }
     }
     return 1;
+}
+
+int IRBuilder::arrayElemByteStride(TypeNode* t) {
+    auto* arr = dynamic_cast<ArrayType*>(t);
+    if (!arr) return 4;
+    if (auto* en = dynamic_cast<NamedType*>(arr->elemType.get())) {
+        if (en->name == "CHAR") return 1;
+    }
+    return 4;
 }
 
 // ── Module ──
@@ -228,6 +242,7 @@ void IRBuilder::visit(VarDecl& d) {
             vi.isGlobal = true;
             vi.globalLabel = label;
             vi.arrayLen = arrLen;
+            vi.elemSize = arrayElemByteStride(d.type.get());
             vi.typeName = tName;
             scopes_.back()[name] = vi;
         } else {
@@ -244,6 +259,7 @@ void IRBuilder::visit(VarDecl& d) {
             vi.addr = addr;
             vi.isGlobal = false;
             vi.arrayLen = arrLen;
+            vi.elemSize = arrayElemByteStride(d.type.get());
             vi.typeName = tName;
             curFunc_->locals[name] = {addr.id, size, false};
             scopes_.back()[name] = vi;
@@ -307,6 +323,8 @@ void IRBuilder::visit(ProcDecl& proc) {
                 vi.isGlobal = false;
                 vi.isVarParam = section->isVar;
                 vi.typeName = resolveTypeName(section->type.get());
+                vi.arrayLen = arrayLength(section->type.get());
+                vi.elemSize = arrayElemByteStride(section->type.get());
                 scopes_.back()[pname] = vi;
                 curFunc_->locals[pname] = {addr.id, 4, section->isVar};
 
@@ -394,6 +412,18 @@ void IRBuilder::visit(LiteralExpr& e) {
 }
 
 void IRBuilder::visit(UnaryExpr& e) {
+    if (e.op == UnaryExpr::Op::Neg && exprIsReal(*e.rhs)) {
+        IRValue rhs = emitExpr(*e.rhs);
+        IRValue dst = curFunc_->freshTemp();
+        IRInstr instr;
+        instr.dst = dst;
+        instr.src1 = rhs;
+        instr.op = IROp::FNeg;
+        emit(instr);
+        lastVal_ = dst;
+        return;
+    }
+
     IRValue rhs = emitExpr(*e.rhs);
     IRValue dst = curFunc_->freshTemp();
 
@@ -411,6 +441,92 @@ void IRBuilder::visit(UnaryExpr& e) {
 }
 
 void IRBuilder::visit(BinaryExpr& e) {
+    bool lr = exprIsReal(*e.lhs);
+    bool rr = exprIsReal(*e.rhs);
+    bool useFloat =
+        (lr || rr) && e.op != BinaryExpr::Op::And && e.op != BinaryExpr::Op::Or &&
+        e.op != BinaryExpr::Op::In && e.op != BinaryExpr::Op::Mod &&
+        e.op != BinaryExpr::Op::IDiv;
+
+    if (useFloat) {
+        IRValue lhs = emitExpr(*e.lhs);
+        IRValue rhs = emitExpr(*e.rhs);
+        if (!lr) lhs = emitIntToRealBits(lhs);
+        if (!rr) rhs = emitIntToRealBits(rhs);
+
+        IRValue dst = curFunc_->freshTemp();
+
+        auto emitFCmp = [&](IROp op) {
+            IRInstr ci;
+            ci.op = op;
+            ci.dst = dst;
+            ci.src1 = lhs;
+            ci.src2 = rhs;
+            emit(ci);
+        };
+
+        switch (e.op) {
+            case BinaryExpr::Op::Add:
+                emitFCmp(IROp::FAdd);
+                break;
+            case BinaryExpr::Op::Sub:
+                emitFCmp(IROp::FSub);
+                break;
+            case BinaryExpr::Op::Mul:
+                emitFCmp(IROp::FMul);
+                break;
+            case BinaryExpr::Op::RDiv:
+                emitFCmp(IROp::FDiv);
+                break;
+            case BinaryExpr::Op::Eq:
+                emitFCmp(IROp::FEq);
+                break;
+            case BinaryExpr::Op::Neq: {
+                IRInstr eq;
+                eq.op = IROp::FEq;
+                eq.dst = dst;
+                eq.src1 = lhs;
+                eq.src2 = rhs;
+                emit(eq);
+                IRInstr n;
+                n.op = IROp::Not;
+                n.dst = dst;
+                n.src1 = dst;
+                emit(n);
+                break;
+            }
+            case BinaryExpr::Op::Lt:
+                emitFCmp(IROp::FLt);
+                break;
+            case BinaryExpr::Op::Le:
+                emitFCmp(IROp::FLe);
+                break;
+            case BinaryExpr::Op::Gt: {
+                IRInstr ci;
+                ci.op = IROp::FLt;
+                ci.dst = dst;
+                ci.src1 = rhs;
+                ci.src2 = lhs;
+                emit(ci);
+                break;
+            }
+            case BinaryExpr::Op::Ge: {
+                IRInstr ci;
+                ci.op = IROp::FLe;
+                ci.dst = dst;
+                ci.src1 = rhs;
+                ci.src2 = lhs;
+                emit(ci);
+                break;
+            }
+            default:
+                emitFCmp(IROp::FAdd);
+                break;
+        }
+        lastVal_ = dst;
+        return;
+    }
+
     IRValue lhs = emitExpr(*e.lhs);
     IRValue rhs = emitExpr(*e.rhs);
     IRValue dst = curFunc_->freshTemp();
@@ -498,6 +614,8 @@ IRValue IRBuilder::emitAddress(DesignatorExpr& des) {
         addr = vi->addr;
     }
 
+    VarInfo* baseVi = vi;
+
     std::string curTypeName = vi ? vi->typeName : "";
 
     if (!implicitField.empty()) {
@@ -574,7 +692,9 @@ IRValue IRBuilder::emitAddress(DesignatorExpr& des) {
                 IRValue index = emitExpr(*idx->index[0]);
                 IRValue newAddr = curFunc_->freshTemp();
                 IRInstr instr;
-                instr.op = IROp::Index;
+                int stride =
+                    (baseVi && baseVi->arrayLen > 0) ? baseVi->elemSize : 4;
+                instr.op = (stride == 1) ? IROp::Index1 : IROp::Index;
                 instr.dst = newAddr;
                 instr.src1 = addr;
                 instr.src2 = index;
@@ -621,7 +741,7 @@ IRValue IRBuilder::emitLoad(DesignatorExpr& des) {
     IRValue addr = emitAddress(des);
     IRValue dst = curFunc_->freshTemp();
     IRInstr load;
-    load.op = IROp::Load;
+    load.op = designatorNeedsByteMemory(des) ? IROp::Load8 : IROp::Load;
     load.dst = dst;
     load.src1 = addr;
     emit(load);
@@ -679,67 +799,9 @@ bool IRBuilder::tryEmitBuiltin(DesignatorExpr& des) {
         proc = name;
     }
 
-    if (mod == "Out" && proc == "Int") {
-        if (!args->args.empty()) {
-            IRValue v = emitExpr(*args->args[0]);
-            IRInstr sc;
-            sc.op = IROp::Syscall;
-            sc.syscallNum = 1;
-            sc.args = {v};
-            emit(sc);
-        }
-        lastVal_ = IRValue::voidVal();
-        return true;
-    }
-
-    if (mod == "Out" && proc == "Ln") {
-        IRInstr sc;
-        sc.op = IROp::Syscall;
-        sc.syscallNum = 11;
-        sc.args = {IRValue::constant(10)};
-        emit(sc);
-        lastVal_ = IRValue::voidVal();
-        return true;
-    }
-
-    if (mod == "Out" && (proc == "String" || proc == "Char")) {
-        int scNum = (proc == "String") ? 4 : 11;
-        if (!args->args.empty()) {
-            IRValue v = emitExpr(*args->args[0]);
-            IRInstr sc;
-            sc.op = IROp::Syscall;
-            sc.syscallNum = scNum;
-            sc.args = {v};
-            emit(sc);
-        }
-        lastVal_ = IRValue::voidVal();
-        return true;
-    }
-
-    if (mod == "In" && proc == "Open") {
-        lastVal_ = IRValue::voidVal();
-        return true;
-    }
-
-    if (mod == "In" && proc == "Int") {
-        IRValue dst = curFunc_->freshTemp();
-        IRInstr sc;
-        sc.op = IROp::Syscall;
-        sc.syscallNum = 5;
-        sc.dst = dst;
-        emit(sc);
-        if (!args->args.empty()) {
-            if (auto* d = dynamic_cast<DesignatorExpr*>(args->args[0].get())) {
-                IRValue addr = emitAddress(*d);
-                IRInstr store;
-                store.op = IROp::Store;
-                store.src1 = addr;
-                store.src2 = dst;
-                emit(store);
-            }
-        }
-        lastVal_ = dst;
-        return true;
+    if (!mod.empty()) {
+        if (o7rc::runtime::irEmitStdlibCall(*this, des, args))
+            return true;
     }
 
     if (proc == "INC" && mod.empty()) {
@@ -959,7 +1021,7 @@ void IRBuilder::visit(AssignStmt& s) {
     IRValue addr = emitAddress(*s.lhs);
 
     IRInstr store;
-    store.op = IROp::Store;
+    store.op = designatorNeedsByteMemory(*s.lhs) ? IROp::Store8 : IROp::Store;
     store.src1 = addr;
     store.src2 = val;
     emit(store);
@@ -968,28 +1030,8 @@ void IRBuilder::visit(AssignStmt& s) {
 void IRBuilder::visit(CallStmt& s) {
     auto& des = *s.designator;
 
-    std::string name = des.baseName;
-    std::string::size_type dotPos = name.find('.');
-    std::string mod, proc;
-    if (dotPos != std::string::npos) {
-        mod = name.substr(0, dotPos);
-        proc = name.substr(dotPos + 1);
-    } else {
-        proc = name;
-    }
-
-    if (mod == "Out" && proc == "Ln") {
-        IRInstr sc;
-        sc.op = IROp::Syscall;
-        sc.syscallNum = 11;
-        sc.args = {IRValue::constant(10)};
-        emit(sc);
+    if (o7rc::runtime::irEmitStdlibStmt(*this, des))
         return;
-    }
-
-    if (mod == "In" && proc == "Open") {
-        return;
-    }
 
     des.accept(*this);
 }
@@ -1330,4 +1372,51 @@ void IRBuilder::visit(CaseStmt& s) {
     curFunc_->linkBlocks(curBlock_->id, mergeBB->id);
 
     setBlock(mergeBB);
+}
+
+bool IRBuilder::exprIsReal(Expr& e) {
+    if (auto* lit = dynamic_cast<LiteralExpr*>(&e))
+        return lit->kind == LiteralExpr::Kind::Real;
+    if (auto* bin = dynamic_cast<BinaryExpr*>(&e))
+        return exprIsReal(*bin->lhs) || exprIsReal(*bin->rhs);
+    if (auto* un = dynamic_cast<UnaryExpr*>(&e)) {
+        if (un->op == UnaryExpr::Op::Neg)
+            return exprIsReal(*un->rhs);
+        return false;
+    }
+    if (auto* des = dynamic_cast<DesignatorExpr*>(&e)) {
+        std::string bn = des->baseName;
+        auto dotp = bn.find('.');
+        std::string lk = (dotp != std::string::npos) ? bn.substr(dotp + 1) : bn;
+        VarInfo* vi = lookupVar(lk);
+        if (!vi) vi = lookupVar(bn);
+        return vi && vi->typeName == "REAL";
+    }
+    return false;
+}
+
+IRValue IRBuilder::emitIntToRealBits(IRValue intVal) {
+    IRValue dst = curFunc_->freshTemp();
+    IRInstr i;
+    i.op = IROp::Itof;
+    i.dst = dst;
+    i.src1 = intVal;
+    emit(i);
+    return dst;
+}
+
+bool IRBuilder::designatorNeedsByteMemory(DesignatorExpr& des) {
+    std::string bn = des.baseName;
+    auto dotp = bn.find('.');
+    std::string lk = (dotp != std::string::npos) ? bn.substr(dotp + 1) : bn;
+    VarInfo* vi = lookupVar(lk);
+    if (!vi) vi = lookupVar(bn);
+    if (!vi || vi->elemSize != 1) return false;
+    if (des.selectors.empty()) return false;
+    Selector* last = des.selectors.back().get();
+    if (dynamic_cast<ArgsSelector*>(last)) {
+        if (des.selectors.size() < 2) return false;
+        last = des.selectors[des.selectors.size() - 2].get();
+    }
+    return dynamic_cast<IndexSelector*>(last) != nullptr;
 }
