@@ -1,12 +1,17 @@
 #include "Sema.h"
 #include <algorithm>
 
-const std::unordered_set<std::string> Sema::builtinProcs_ = {
-    "INC", "DEC", "NEW", "ABS", "ODD", "ORD", "CHR", "LEN",
-    "ASSERT", "PACK", "UNPK", "FLOOR", "FLT", "LSL", "ASR", "ROR",
-    "Out.Int", "Out.Ln", "Out.String", "Out.Char", "Out.Real",
-    "In.Int", "In.Char", "In.Line",
-};
+#include <runtime/StdlibProc.h>
+
+const std::unordered_set<std::string> Sema::builtinProcs_ = [] {
+    std::unordered_set<std::string> s = {
+        "INC", "DEC", "NEW", "ABS", "ODD", "ORD", "CHR", "LEN",
+        "ASSERT", "PACK", "UNPK", "FLOOR", "FLT", "LSL", "ASR", "ROR",
+    };
+    for (const auto& q : o7rc::runtime::stdlibQualifiedProcNames())
+        s.insert(q);
+    return s;
+}();
 
 const std::unordered_set<std::string> Sema::builtinTypes_ = {
     "INTEGER", "BOOLEAN", "REAL", "CHAR", "SET", "BYTE", "LONGREAL",
@@ -233,14 +238,15 @@ void Sema::visit(DesignatorExpr& des) {
     if (dot != std::string::npos) {
         std::string modName = baseName.substr(0, dot);
         std::string qualName = modName + "." + lookupName;
-        if (builtinProcs_.count(qualName))
-            goto selectors;
-        if (!lookup(modName)) {
+        // SYSTEM не загружается с диска; остальные квалифицированные имена требуют IMPORT.
+        if (modName != "SYSTEM" && !lookup(modName)) {
             error(SemaError::UndefinedSymbol,
                   "undefined module '" + modName + "'",
                   des.range.begin);
             return;
         }
+        if (builtinProcs_.count(qualName))
+            goto selectors;
         goto selectors;
     }
 

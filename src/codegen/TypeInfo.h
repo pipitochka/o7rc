@@ -37,6 +37,8 @@ public:
     TypeInfo* booleanType();
     TypeInfo* realType();
     TypeInfo* charType();
+    /// Однобайтовый CHAR для элементов ARRAY n OF CHAR (совместимость с In.Line / Out.String и RARS).
+    TypeInfo* char8Type();
     TypeInfo* setType();
     TypeInfo* nilType();
     TypeInfo* voidType();
@@ -57,6 +59,7 @@ private:
     TypeInfo* bool_ = nullptr;
     TypeInfo* real_ = nullptr;
     TypeInfo* char_ = nullptr;
+    TypeInfo* char8_ = nullptr;
     TypeInfo* set_ = nullptr;
     TypeInfo* nil_ = nullptr;
     TypeInfo* void_ = nullptr;

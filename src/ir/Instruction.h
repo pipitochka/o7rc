@@ -19,6 +19,16 @@ enum class IROp {
     Add, Sub, Mul, Div, Mod,
     Neg,
 
+    /// Преобразование INTEGER → биты IEEE REAL (RV32F fcvt)
+    Itof,
+    FAdd, FSub, FMul, FDiv, FNeg,
+    FEq, FLt, FLe,
+
+    /// Индекс с шагом 1 байт (ARRAY … OF CHAR)
+    Index1,
+    Load8,
+    Store8,
+
     // Comparison
     Eq, Neq, Lt, Le, Gt, Ge,
 
@@ -63,6 +73,7 @@ struct IRInstr {
     bool hasDst() const {
         switch (op) {
             case IROp::StoreGlobal: case IROp::StoreLocal: case IROp::Store:
+            case IROp::Store8:
             case IROp::Branch: case IROp::Jump: case IROp::Ret:
             case IROp::Syscall: case IROp::Nop:
                 return false;
@@ -86,8 +97,10 @@ struct IRInstr {
             case IROp::Add: case IROp::Sub: case IROp::Mul: case IROp::Div:
             case IROp::Mod: case IROp::Eq: case IROp::Neq: case IROp::Lt:
             case IROp::Le: case IROp::Gt: case IROp::Ge: case IROp::And:
-            case IROp::Or: case IROp::Index: case IROp::StoreLocal:
-            case IROp::Store:
+            case IROp::Or: case IROp::Index: case IROp::Index1:
+            case IROp::FAdd: case IROp::FSub: case IROp::FMul: case IROp::FDiv:
+            case IROp::FEq: case IROp::FLt: case IROp::FLe:
+            case IROp::StoreLocal: case IROp::Store: case IROp::Store8:
                 return true;
             default:
                 return false;

@@ -93,6 +93,37 @@ TEST_P(TokenizerLogicTest, CapturesUnknownCharacters) {
     EXPECT_EQ(err2.text, "%");
 }
 
+TEST_P(TokenizerLogicTest, ParsesDoublePrecisionLiteral) {
+    auto tz = make("1.2345678901234567");
+    Token t = tz->next();
+    EXPECT_EQ(t.type, TokenType::Real);
+    EXPECT_DOUBLE_EQ(t.realValue, 1.2345678901234567);
+}
+
+TEST_P(TokenizerLogicTest, ParsesDoubleLiteralLargeIntegerMantissa) {
+    // Целое > 2^53 не представимо точно в IEEE double, но значение задаётся через литерал double.
+    auto tz = make("9007199254740993.0");
+    Token t = tz->next();
+    EXPECT_EQ(t.type, TokenType::Real);
+    EXPECT_DOUBLE_EQ(t.realValue, 9007199254740993.0);
+}
+
+TEST_P(TokenizerLogicTest, ParsesScientificNotationLiterals) {
+    // Oberon real требует точку в мантиссе; литерал вида 2E+5 без точки даёт Integer + Ident.
+    auto tz = make("6.02214076E23  1.5e-10  2.0E+5");
+    Token a = tz->next();
+    EXPECT_EQ(a.type, TokenType::Real);
+    EXPECT_DOUBLE_EQ(a.realValue, 6.02214076e23);
+
+    Token b = tz->next();
+    EXPECT_EQ(b.type, TokenType::Real);
+    EXPECT_DOUBLE_EQ(b.realValue, 1.5e-10);
+
+    Token c = tz->next();
+    EXPECT_EQ(c.type, TokenType::Real);
+    EXPECT_DOUBLE_EQ(c.realValue, 2e5);
+}
+
 INSTANTIATE_TEST_SUITE_P(
     AllTokenizers, TokenizerLogicTest,
     ::testing::ValuesIn(availableTokenizers()),

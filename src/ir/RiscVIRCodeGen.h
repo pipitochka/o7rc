@@ -27,6 +27,8 @@ private:
 
     void allocateSlots(const IRFunction& fn);
     int slotOf(int tempId);
+    /// Уникальный префикс меток (модуль + имя функции), чтобы In.Int и Out.Int не делили L_Int_bb0.
+    std::string funcAsmPrefix(const IRFunction& fn) const;
     std::string blockLabel(const IRFunction& fn, int bbId);
 
     void loadValue(const IRValue& v, const std::string& reg);

@@ -6,6 +6,15 @@
 #include <util/ast/IVisitor.h>
 #include <util/ast/Ast.h>
 
+class DesignatorExpr;
+class ArgsSelector;
+class RiscVCodeGen;
+
+namespace o7rc::runtime {
+bool riscvEmitStdlibCall(RiscVCodeGen&, DesignatorExpr&, ArgsSelector*);
+bool riscvEmitStdlibStmt(RiscVCodeGen&, DesignatorExpr&);
+}
+
 /// Кодогенератор Oberon-7 → RISC-V ассемблер (RV32IM, совместим с RARS).
 ///
 /// Стратегия: стековая модель вычисления выражений.
@@ -64,6 +73,9 @@ public:
     void visit(CaseLabel&) override;
 
 private:
+    friend bool o7rc::runtime::riscvEmitStdlibCall(RiscVCodeGen&, DesignatorExpr&, ArgsSelector*);
+    friend bool o7rc::runtime::riscvEmitStdlibStmt(RiscVCodeGen&, DesignatorExpr&);
+
     Emitter emit_;
     SymbolTable sym_;
     TypeRegistry types_;
@@ -83,6 +95,10 @@ private:
     /// Проверяет, является ли designator вызовом встроенной процедуры,
     /// и генерирует код для неё. Возвращает true если обработано.
     bool tryEmitBuiltinCall(DesignatorExpr& des);
+
+    TypeInfo* typeAfterDesignator(DesignatorExpr& des);
+    bool exprIsReal(Expr& e);
+    bool designatorNeedsByteMemory(DesignatorExpr& des);
 
     /// Генерирует код для всех операторов в последовательности.
     void emitStatements(const std::vector<StmtPtr>& stmts);

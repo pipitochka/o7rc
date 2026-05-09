@@ -1,0 +1,23 @@
+MODULE Out;
+
+PROCEDURE Int*(x, w: INTEGER);
+BEGIN
+END Int;
+
+PROCEDURE Ln*;
+BEGIN
+END Ln;
+
+PROCEDURE String*(s: ARRAY OF CHAR);
+BEGIN
+END String;
+
+PROCEDURE Char*(ch: CHAR);
+BEGIN
+END Char;
+
+PROCEDURE Real*(x: REAL);
+BEGIN
+END Real;
+
+END Out.

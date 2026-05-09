@@ -1,0 +1,9 @@
+MODULE ReadLineEcho;
+IMPORT In, Out;
+VAR line: ARRAY 32 OF CHAR;
+BEGIN
+    In.Open;
+    In.Line(line);
+    Out.String(line);
+    Out.Ln
+END ReadLineEcho.

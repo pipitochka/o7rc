@@ -68,6 +68,17 @@ TEST_P(SemaTest, ConstDeclNoErrors) {
     EXPECT_TRUE(errs.empty());
 }
 
+TEST_P(SemaTest, LongrealVarDeclNoErrors) {
+    auto errs = analyze("MODULE M; VAR x: LONGREAL; END M.");
+    EXPECT_TRUE(errs.empty());
+}
+
+TEST_P(SemaTest, LongrealAssignmentLiteralNoErrors) {
+    auto errs = analyze(
+        "MODULE M; VAR x: LONGREAL; BEGIN x := 3.141592653589793 END M.");
+    EXPECT_TRUE(errs.empty());
+}
+
 TEST_P(SemaTest, ProcedureNoErrors) {
     auto errs = analyze(
         "MODULE M; "

@@ -136,6 +136,17 @@ TEST_P(ParserTypeTest, ParsesProcedureType) {
     EXPECT_EQ(pt->type->name, "INTEGER");
 }
 
+TEST_P(ParserTypeTest, ParsesLongrealVarDecl) {
+    auto mod = parseDecls("VAR x: LONGREAL;");
+    auto* vd = dynamic_cast<VarDecl*>(getDecl(mod.get(), 0));
+    ASSERT_NE(vd, nullptr);
+    ASSERT_EQ(vd->names.size(), 1u);
+    EXPECT_EQ(vd->names[0], "x");
+    auto* nt = dynamic_cast<NamedType*>(vd->type.get());
+    ASSERT_NE(nt, nullptr);
+    EXPECT_EQ(nt->name, "LONGREAL");
+}
+
 INSTANTIATE_TEST_SUITE_P(AllConfigs, ParserTypeTest,
     ::testing::ValuesIn(allConfigs()), configName);
 

@@ -1,0 +1,5 @@
+MODULE StringHello;
+IMPORT Out;
+BEGIN
+    Out.String("Hello"); Out.Ln
+END StringHello.
