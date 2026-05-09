@@ -25,8 +25,13 @@ void RiscVIRCodeGen::generate(const IRModule& mod, std::ostream& out) {
     emit_.writeTo(out);
 }
 
+std::string RiscVIRCodeGen::funcAsmPrefix(const IRFunction& fn) const {
+    const std::string& mod = fn.moduleName.empty() ? moduleName_ : fn.moduleName;
+    return mod + "_" + fn.name;
+}
+
 std::string RiscVIRCodeGen::blockLabel(const IRFunction& fn, int bbId) {
-    return "L_" + fn.name + "_bb" + std::to_string(bbId);
+    return "L_" + funcAsmPrefix(fn) + "_bb" + std::to_string(bbId);
 }
 
 void RiscVIRCodeGen::allocateSlots(const IRFunction& fn) {
@@ -125,7 +130,7 @@ void RiscVIRCodeGen::emitFunction(const IRFunction& fn, const std::string& label
         emitBlock(*bb);
     }
 
-    std::string epilogue = "L_" + fn.name + "_epilogue";
+    std::string epilogue = "L_" + funcAsmPrefix(fn) + "_epilogue";
     emit_.label(epilogue);
     emit_.text("lw ra, " + std::to_string(frameSize_ - 4) + "(sp)");
     emit_.text("lw s0, " + std::to_string(frameSize_ - 8) + "(sp)");
@@ -435,7 +440,7 @@ void RiscVIRCodeGen::emitInstr(const IRInstr& instr) {
             if (!instr.src1.isVoid()) {
                 loadValue(instr.src1, "a0");
             }
-            emit_.text("j L_" + curFunc_->name + "_epilogue");
+            emit_.text("j L_" + funcAsmPrefix(*curFunc_) + "_epilogue");
             break;
         }
 
